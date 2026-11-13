@@ -9,6 +9,7 @@
     "start": "node --env-file-if-exists=.env src/index.js",
     "migrate": "node --env-file-if-exists=.env src/db/migrate-cli.js",
     "seed": "node --env-file-if-exists=.env seed/seed-cli.js",
+    "create-owner": "node --env-file-if-exists=.env seed/create-owner.js",
     "email:test": "node --env-file-if-exists=.env src/services/email-test-cli.js",
     "test": "node --test --test-concurrency=4 \"test/**/*.test.js\""
   },
