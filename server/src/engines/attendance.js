@@ -88,6 +88,7 @@ export function summarizeDay({ date, events, shift, timeZone, day, leave = null,
   if (events.some((e) => !e.time_verified)) flags.add('unverified_time');
   if (events.some((e) => e.method === 'system_autoclose')) flags.add('missed_checkout');
   if (events.some((e) => e.method === 'correction')) flags.add('corrected');
+  if (events.some((e) => e.method === 'manual')) flags.add('manual_entry');
 
   const workedMinutes = Math.round(workedMs / 60000);
   const firstIn = sessions[0]?.in.punch_time ?? null;

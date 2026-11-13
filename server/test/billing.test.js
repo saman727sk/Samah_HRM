@@ -45,7 +45,7 @@ describe('billing', () => {
     assert.equal((await call('hr', 'GET', '/api/admin/plans')).status, 403);
     assert.equal((await call('hr', 'GET', '/api/admin/dashboard')).status, 403);
     assert.equal((await call('ali', 'GET', '/api/billing/subscription')).status, 403, 'employees do not see billing');
-    assert.equal((await call('owner', 'GET', '/api/admin/plans')).body.length, 4);
+    assert.equal((await call('owner', 'GET', '/api/admin/plans')).body.length, 7);
   });
 
   test('plans: validation, unique code, code cannot change, price change keeps existing subscriptions', async () => {

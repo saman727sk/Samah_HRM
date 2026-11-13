@@ -6,10 +6,47 @@ import { useConfirm } from '../components/confirm.jsx';
 import { PageHead } from '../components/Layout.jsx';
 import { Button, Card, ErrorBox, Input, Loading, Modal, PasswordInput, StatusBadge, Switch, useLoad } from '../components/ui.jsx';
 
+/** Modules HR can switch off for one person (matches PERSONAL_MODULES on the server). */
+const PERSONAL_MODULES = [
+  ['attendance', 'Attendance', 'Check in / out and attendance history'],
+  ['leave', 'Leave', 'Apply for leave, see balances'],
+  ['wfh', 'Work from home', 'Request WFH days'],
+  ['tasks', 'Daily tasks', 'Log daily work, links and files'],
+  ['payroll', 'Payslips', 'See their own payslips'],
+];
+
+function ModuleAccess({ value, onChange, companyModules, isHrLogin }) {
+  const on = (m) => value == null || value.includes(m);
+  const toggle = (m, checked) => {
+    const next = PERSONAL_MODULES.map(([k]) => k).filter((k) => (k === m ? checked : on(k)));
+    onChange(next.length === PERSONAL_MODULES.length ? null : next);
+  };
+  return (
+    <Card title="Module access">
+      {isHrLogin ? <p className="small muted">HR admins always have every module.</p> : (
+        <div className="stack">
+          <p className="small muted">Untick what this person should not see. Their menu hides it and the server refuses it.</p>
+          <div className="form-grid">
+            {PERSONAL_MODULES.map(([m, label, help]) => {
+              const companyOff = !companyModules.includes(m);
+              return (
+                <label key={m} className="row" style={{ alignItems: 'flex-start', gap: 8, opacity: companyOff ? 0.6 : 1 }}>
+                  <input type="checkbox" checked={on(m)} onChange={(e) => toggle(m, e.target.checked)} />
+                  <span><strong>{label}</strong><br /><span className="small muted">{companyOff ? 'Switched off for the whole company' : help}</span></span>
+                </label>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </Card>
+  );
+}
+
 function EmployeeForm({ item, refs, onClose, onSaved }) {
-  const { toast } = useApp();
+  const { toast, session } = useApp();
   const confirm = useConfirm();
-  const [v, setV] = useState(item ?? { status: 'active', custom_fields: {} });
+  const [v, setV] = useState(item ?? { status: 'active', custom_fields: {}, module_access: null });
   const [login, setLogin] = useState(item ? null : { email: '', password: '', accessLevel: 'employee' });
   const [error, setError] = useState(null);
   const set = (k) => (e) => setV({ ...v, [k]: e.target.value || null });
@@ -23,7 +60,7 @@ function EmployeeForm({ item, refs, onClose, onSaved }) {
     if (item && item.status === 'active' && v.status !== 'active' && !(await confirm({ title: `Mark ${item.full_name} as ${v.status}?`, danger: true,
       confirmLabel: v.status === 'exited' ? 'Mark as exited' : 'Deactivate', message: 'Their sign-in is disabled straight away, and they drop out of attendance, approvals and new payroll runs. Their history is kept, and you can reactivate them later.' }))) return;
     const keys = ['employee_code', 'full_name', 'email', 'phone', 'department_id', 'role_id', 'employment_type_id', 'manager_id', 'shift_id', 'location_id',
-      'joining_date', 'probation_end_date', 'exit_date', 'status', 'custom_fields'];
+      'joining_date', 'probation_end_date', 'exit_date', 'status', 'custom_fields', 'module_access'];
     const body = Object.fromEntries(keys.filter((k) => v[k] !== undefined).map((k) => [k, v[k]]));
     try {
       if (item) await patch(`/employees/${item.id}`, body);
@@ -62,6 +99,8 @@ function EmployeeForm({ item, refs, onClose, onSaved }) {
               value={v.custom_fields?.[f.field_key] ?? ''} onChange={(e) => setV({ ...v, custom_fields: { ...v.custom_fields, [f.field_key]: f.field_type === 'number' ? Number(e.target.value) : e.target.value } })} />
           ))}
         </div>
+        <ModuleAccess value={v.module_access ?? null} onChange={(module_access) => setV({ ...v, module_access })}
+          companyModules={session.modules ?? []} isHrLogin={item ? item.access_level === 'hr_admin' : login?.accessLevel === 'hr_admin'} />
         {login && (
           <Card title="Sign-in account (optional)">
             <div className="form-grid">
@@ -104,7 +143,8 @@ export default function Employees() {
             <tbody>{rows.map((e) => (
               <tr key={e.id}><td style={{ fontVariantNumeric: 'tabular-nums' }}>{e.employee_code}</td><td>{e.full_name}</td><td>{e.department_name ?? '—'}</td><td>{e.role_name ?? '—'}</td>
                 <td>{e.manager_name ?? '—'}</td><td>{fmtDate(e.joining_date)}</td>
-                <td>{e.status === 'active' ? <span className="badge good">Active</span> : <StatusBadge status={e.status} />}</td>
+                <td>{e.status === 'active' ? <span className="badge good">Active</span> : <StatusBadge status={e.status} />}
+                  {e.module_access && e.access_level !== 'hr_admin' && <span className="badge" title={`Can use: ${e.module_access.join(', ') || 'nothing'}`}>Limited access</span>}</td>
                 <td><Button size="sm" disabled={!refs} onClick={() => setEditing(e)}>Edit</Button></td></tr>
             ))}</tbody>
           </table></div>

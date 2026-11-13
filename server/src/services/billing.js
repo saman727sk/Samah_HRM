@@ -26,7 +26,7 @@ import { PRODUCT_NAME } from '../lib/product.js';
 import { round2 } from '../lib/util.js';
 import { hrUserIds, notify } from './notifications.js';
 
-export const MODULES = ['attendance', 'wfh', 'leave', 'payroll', 'overtime', 'loans', 'auto_checkin', 'selfie_verification'];
+export const MODULES = ['attendance', 'wfh', 'leave', 'payroll', 'overtime', 'loans', 'auto_checkin', 'selfie_verification', 'tasks'];
 export const PAYMENT_METHODS = ['bank_transfer', 'cash', 'cheque', 'card', 'online', 'other'];
 const BLOCKED = new Set(['unpaid', 'cancelled', 'expired']);
 

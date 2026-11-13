@@ -5,6 +5,7 @@ import { badRequest, conflict, notFound } from '../lib/errors.js';
 import { validateCustomFields } from './customFields.js';
 import { assertCanView, assertInTenant, isHr, isManager, isSystem, reportIds, requireHr } from './access.js';
 import { assertWithinLimit } from './billing.js';
+import { normalizeModuleAccess } from './features.js';
 
 /** Reference columns and the tenant table each must point into. */
 const REFERENCES = {
@@ -20,7 +21,17 @@ async function assertReferences(ctx, data) {
 }
 
 const EDITABLE = ['employee_code', 'full_name', 'email', 'phone', 'department_id', 'role_id', 'employment_type_id', 'manager_id',
-  'shift_id', 'location_id', 'holiday_calendar_id', 'joining_date', 'probation_end_date', 'exit_date', 'status', 'custom_fields'];
+  'shift_id', 'location_id', 'holiday_calendar_id', 'joining_date', 'probation_end_date', 'exit_date', 'status', 'custom_fields', 'module_access'];
+
+/** Picks the editable fields; module_access is checked and stored as JSON text (a JS array would become a SQL array). */
+function editable(input) {
+  const data = Object.fromEntries(EDITABLE.filter((k) => input[k] !== undefined).map((k) => [k, input[k]]));
+  if ('module_access' in data) {
+    const list = normalizeModuleAccess(data.module_access);
+    data.module_access = list == null ? null : JSON.stringify(list);
+  }
+  return data;
+}
 
 export async function getEmployee(ctx, id, { check = true } = {}) {
   if (check) await assertCanView(ctx, id);
@@ -36,8 +47,9 @@ export async function listEmployees(ctx, { departmentId, status = 'active' } = {
     if (isManager(ctx) && ctx.actor.employeeId) ids.push(...(await reportIds(ctx, ctx.actor.employeeId)));
   }
   const { rows } = await ctx.db.query(
-    `select e.*, d.name as department_name, r.name as role_name, m.full_name as manager_name
+    `select e.*, d.name as department_name, r.name as role_name, m.full_name as manager_name, u.access_level
        from employees e
+       left join users u on u.id = e.user_id and u.tenant_id = e.tenant_id
        left join departments d on d.id = e.department_id and d.tenant_id = e.tenant_id
        left join roles r on r.id = e.role_id and r.tenant_id = e.tenant_id
        left join employees m on m.id = e.manager_id and m.tenant_id = e.tenant_id
@@ -148,7 +160,7 @@ export async function assertEmailFree(db, email, tenantId) {
 /** `account`: internal only (never from a request body), see createLogin. */
 export async function createEmployee(ctx, input, { account = null } = {}) {
   requireHr(ctx);
-  const data = Object.fromEntries(EDITABLE.filter((k) => input[k] !== undefined).map((k) => [k, input[k]]));
+  const data = editable(input);
   if (!data.employee_code?.trim()) data.employee_code = await nextEmployeeCode(ctx); // left empty: generate it
   validateEmployee(data);
   await assertReferences(ctx, data);
@@ -178,7 +190,7 @@ export async function createEmployee(ctx, input, { account = null } = {}) {
 export async function updateEmployee(ctx, id, input) {
   requireHr(ctx);
   const before = await getEmployee(ctx, id);
-  const data = Object.fromEntries(EDITABLE.filter((k) => input[k] !== undefined).map((k) => [k, input[k]]));
+  const data = editable(input);
   validateEmployee({ ...before, ...data });
   await assertReferences(ctx, data);
   if (data.status === 'active' && before.status !== 'active') await assertWithinLimit(ctx, 'employees');

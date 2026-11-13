@@ -27,6 +27,9 @@ const SKIP_TABLES = new Set(['schema_migrations', '_changes', '_sync_state', 'si
 const SECRET_COLUMNS = { users: ['password_hash'] };
 const LEASE_MS = 60_000;
 const BATCH = 1000;
+// Realtime Database refuses very large single writes; file chunks (512 KB of
+// base64 each) are big, so a flush also stops at about this many bytes.
+const BATCH_BYTES = 6 * 1024 * 1024;
 
 export class SyncConflictError extends Error {}
 
@@ -153,8 +156,16 @@ export function createSync({ db, rtdb, root = 'hrm', source = null, instanceId =
       let sent = 0;
       try {
         for (;;) {
-          const { rows } = await db.query('select id, tbl, pk, op, row from _changes order by id limit $1', [BATCH]);
-          if (!rows.length) return sent;
+          const { rows: sizes } = await db.query(
+            'select id, coalesce(octet_length(row::text), 0) as bytes from _changes order by id limit $1', [BATCH]);
+          if (!sizes.length) return sent;
+          let upTo = sizes[0].id;
+          for (let i = 0, total = 0; i < sizes.length; i += 1) {
+            total += Number(sizes[i].bytes);
+            if (i > 0 && total > BATCH_BYTES) break; // always at least one row
+            upTo = sizes[i].id;
+          }
+          const { rows } = await db.query('select id, tbl, pk, op, row from _changes where id <= $1 order by id', [upTo]);
           const t = await info();
           const { version } = await localState();
           const updates = {};

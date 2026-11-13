@@ -4,6 +4,7 @@ import { useApp } from '../lib/app.jsx';
 import { fmtTime, monthLabel, monthOf, shiftMonth, todayIn, WEEKDAYS } from '../lib/format.js';
 import { PageHead } from '../components/Layout.jsx';
 import { Button, Card, Empty, ErrorBox, Flags, Loading, Stat, StatusBadge, useLoad } from '../components/ui.jsx';
+import { ManualAttendanceModal } from '../components/ManualAttendance.jsx';
 
 export function TodayBoard({ board }) {
   const { t, tz } = useApp();
@@ -58,14 +59,20 @@ export function TeamCalendar({ cal }) {
 }
 
 export default function Team() {
-  const { t, tz } = useApp();
+  const { t, tz, session } = useApp();
   const [month, setMonth] = useState(monthOf(todayIn(tz)));
-  const { data, error, loading } = useLoad(() => get(`/dashboard/manager${qs({ month })}`), [month]);
+  const [manual, setManual] = useState(false);
+  const { data, error, loading, reload } = useLoad(() => get(`/dashboard/manager${qs({ month })}`), [month]);
+  const modules = session.modules ?? [];
   if (loading && !data) return <Loading />;
   if (error) return <ErrorBox error={error} />;
   return (
     <div className="stack lg">
-      <PageHead title={t('nav.team', 'Team dashboard')} actions={<a className="btn primary" href="#/approvals">{t('nav.approvals', 'Approvals')} ({data.approvals.length})</a>} />
+      <PageHead title={t('nav.team', 'Team dashboard')} actions={<>
+        {modules.includes('attendance') && data.team.people.length > 0 && <Button icon="clock" onClick={() => setManual(true)}>{t('ui.record_attendance', 'Record attendance')}</Button>}
+        {modules.includes('tasks') && <a className="btn" href="#/tasks?scope=team">{t('ui.work_reports', 'Work reports')}</a>}
+        <a className="btn primary" href="#/approvals">{t('nav.approvals', 'Approvals')} ({data.approvals.length})</a></>} />
+      {manual && <ManualAttendanceModal onClose={() => setManual(false)} onDone={reload} />}
       <Card title={t('ui.team_today', 'Team today')}>{data.team.people.length ? <TodayBoard board={data.team} /> : <Empty>{t('ui.no_team', 'Nobody reports to you yet.')}</Empty>}</Card>
       <Card title={`${t('ui.team_calendar', 'Team calendar')} — ${monthLabel(month)}`} actions={<>
         <Button size="sm" aria-label="Previous month" onClick={() => setMonth(shiftMonth(month, -1))}>‹</Button>

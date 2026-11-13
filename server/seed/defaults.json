@@ -71,6 +71,16 @@
       "notify.request_cancelled.body": "{employeeName} cancelled {summary}.",
       "notify.checkout_auto_closed.title": "Missed check-out on {date}",
       "notify.checkout_auto_closed.body": "Your session was closed automatically at {time}. Request a correction if this is wrong.",
+      "notify.attendance_recorded.title": "Attendance recorded for {date}",
+      "notify.attendance_recorded.body": "{enteredBy} recorded your attendance on {date}: {times}. Reason: {reason}",
+      "notify.task_blocked.title": "Blocked: {title}",
+      "notify.task_blocked.body": "{employeeName} is blocked on \"{title}\" ({date}): {blocker}",
+      "attendance.manual_in_future": "Manual attendance can't be in the future.",
+      "attendance.manual_overlaps": "This overlaps attendance already recorded ({time}). Request a correction instead, or pick other times.",
+      "attendance.manual_open_after": "There is a later check-in at {time} without a check-out. Enter a check-out time too.",
+      "attendance.manual_no_check_in": "There is no open check-in on {date} to close. Enter a check-in time too.",
+      "attendance.manual_not_employed": "{date} is outside this person's employment dates.",
+      "flag.manual_entry": "Entered manually",
       "status.in_office": "In office",
       "status.wfh": "Work from home",
       "status.on_leave": "On leave",
@@ -180,6 +190,7 @@
       "flag.missed_checkout": "چیک آؤٹ رہ گیا",
       "flag.unverified_time": "غیر تصدیق شدہ وقت",
       "flag.overtime": "اوور ٹائم",
+      "flag.manual_entry": "دستی اندراج",
       "request.overtime": "اوور ٹائم کا دعویٰ",
       "leave.period_locked": "{date} ایک مقفل پے رول مدت ({period}) میں ہے۔ اگلے پے رول میں ایڈجسٹمنٹ کے لیے HR سے رابطہ کریں۔",
       "overtime.period_locked": "{date} ایک مقفل پے رول مدت ({period}) میں ہے۔",
@@ -393,7 +404,8 @@
       "auto_checkin": false,
       "selfie_verification": false,
       "overtime": false,
-      "loans": false
+      "loans": false,
+      "tasks": true
     },
     "employmentTypes": [
       {

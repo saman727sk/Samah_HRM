@@ -199,8 +199,10 @@ function OvertimeForm({ onSubmitted }) {
 
 export default function Requests() {
   const { t, toast, session } = useApp();
-  const [tab, setTab] = useState('leave');
   const overtimeOn = session.modules?.includes('overtime');
+  const leaveOn = session.modules?.includes('leave');
+  const wfhOn = session.modules?.includes('wfh');
+  const [tab, setTab] = useState(leaveOn ? 'leave' : wfhOn ? 'wfh' : 'overtime');
   const { data, loading, error, reload } = useLoad(() => get('/dashboard/employee'), []);
   const confirm = useConfirm();
   const cancel = async (kind, id) => {
@@ -217,7 +219,8 @@ export default function Requests() {
       <PageHead title={t('nav.requests', 'Leave & WFH')} subtitle={t('ui.requests_sub', 'Apply, see live policy checks, and track your requests.')} />
       <div className="grid cols-2">
         <Card>
-          <Tabs value={tab} onChange={setTab} tabs={[{ value: 'leave', label: t('ui.apply_leave', 'Apply for leave') }, { value: 'wfh', label: t('ui.request_wfh', 'Request WFH') },
+          <Tabs value={tab} onChange={setTab} tabs={[...(leaveOn ? [{ value: 'leave', label: t('ui.apply_leave', 'Apply for leave') }] : []),
+            ...(wfhOn ? [{ value: 'wfh', label: t('ui.request_wfh', 'Request WFH') }] : []),
             ...(overtimeOn ? [{ value: 'overtime', label: t('ui.claim_overtime', 'Claim overtime') }] : [])]} />
           {tab === 'leave' ? <LeaveForm onSubmitted={reload} /> : tab === 'wfh' ? <WfhForm onSubmitted={reload} /> : <OvertimeForm onSubmitted={reload} />}
         </Card>

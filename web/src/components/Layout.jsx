@@ -106,7 +106,8 @@ export default function Layout({ route, children }) {
     get('/approvals').then((x) => setPending(x.length)).catch(() => {});
   }, [isManager, route.path]);
   const close = () => setMenu(false);
-  const payrollOn = session.modules?.includes('payroll');
+  const has = (m) => !!session.modules?.includes(m);
+  const payrollOn = has('payroll');
   const p = route.path;
   const dark = theme === 'dark' || (theme === 'system' && window.matchMedia?.('(prefers-color-scheme: dark)').matches);
   const name = session.employee?.full_name ?? session.user.accessLevel;
@@ -129,8 +130,9 @@ export default function Layout({ route, children }) {
     : [
       [
         ['#/', 'home', t('nav.my_dashboard', 'Dashboard')],
-        ['#/attendance', 'clock', t('nav.attendance', 'Attendance')],
-        ['#/requests', 'send', t('nav.requests', 'Leave & WFH')],
+        ...(has('attendance') ? [['#/attendance', 'clock', t('nav.attendance', 'Attendance')]] : []),
+        ...(has('leave') || has('wfh') ? [['#/requests', 'send', t('nav.requests', 'Leave & WFH')]] : []),
+        ...(has('tasks') ? [['#/tasks', 'tasks', t('nav.tasks', 'Daily tasks')]] : []),
         ...(payrollOn ? [['#/payslips', 'file', t('nav.payslips', 'Payslips')]] : []),
       ],
       ...(isManager ? [[

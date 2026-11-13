@@ -38,6 +38,9 @@ const ICONS = {
   eye: 'M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z',
   eyeOff: 'M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19M14.12 14.12a3 3 0 1 1-4.24-4.24M1 1l22 22',
   grid: 'M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z',
+  tasks: 'M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11',
+  paperclip: 'M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48',
+  link: 'M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71',
 };
 
 export function Icon({ name, size = 18, title }) {
@@ -237,6 +240,10 @@ const STATUS = {
   void: ['', 'status.void', 'Void', 'x'],
   suspended: ['bad', 'status.suspended', 'Suspended', 'lock'],
   inactive: ['', 'status.inactive', 'Inactive', 'x'],
+  // Daily tasks
+  completed: ['good', 'status.completed', 'Completed', 'check'],
+  in_progress: ['info', 'status.in_progress', 'In progress', 'clock'],
+  blocked: ['bad', 'status.blocked', 'Blocked', 'alert'],
 };
 
 /** Status shown as icon + text + colour (never colour alone). */
@@ -250,8 +257,9 @@ const FLAG_LABELS = {
   late: 'Late', half_day: 'Half day', short_hours: 'Short hours', overtime: 'Overtime', missed_checkout: 'Missed check-out',
   unverified_time: 'Unverified time', corrected: 'Corrected', insufficient_hours: 'Too few hours', open_session: 'Still open',
   worked_on_off_day: 'Worked on day off', worked_on_leave: 'Worked on leave', check_out_without_check_in: 'Out without in',
+  manual_entry: 'Entered manually',
 };
-const FLAG_KIND = { late: 'warn', half_day: 'warn', short_hours: 'warn', missed_checkout: 'bad', unverified_time: 'bad', insufficient_hours: 'bad', overtime: 'info', corrected: 'violet' };
+const FLAG_KIND = { late: 'warn', half_day: 'warn', short_hours: 'warn', missed_checkout: 'bad', unverified_time: 'bad', insufficient_hours: 'bad', overtime: 'info', corrected: 'violet', manual_entry: 'violet' };
 
 export function Flags({ flags }) {
   const { t } = useApp();

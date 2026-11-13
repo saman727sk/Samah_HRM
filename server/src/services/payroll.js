@@ -416,12 +416,14 @@ export async function getPayslip(ctx, id) {
        join payroll_runs r on r.id = p.payroll_run_id where p.id = $1 and p.tenant_id = $2`, [id, ctx.tenant.id]);
   // Salary data: HR, or the employee once the month is locked. Managers never.
   if (!p || (!isHr(ctx) && (ctx.actor?.employeeId !== p.employee_id || p.run_status !== 'locked'))) throw notFound('Payslip');
+  if (!isHr(ctx)) await requireModule(ctx, 'payroll'); // HR can switch payslips off per employee
   // The company's own letterhead (its logo is fetched separately by the PDF route / the page).
   return { ...p, currency: ctx.tenant.currency, company: ctx.tenant.name,
     companyDetails: { name: ctx.tenant.name, address: ctx.tenant.address, phone: ctx.tenant.phone, email: ctx.tenant.contact_email, logoUrl: logoUrl(ctx.tenant) } };
 }
 
 export async function myPayslips(ctx) {
+  if (!(await isEnabled(ctx, 'payroll'))) return [];
   return (await ctx.db.query(
     `select p.id, r.period_key, r.period_start, p.gross, p.deductions, p.net, r.locked_at from payslips p join payroll_runs r on r.id = p.payroll_run_id
       where p.tenant_id = $1 and p.employee_id = $2 and r.status = 'locked' order by r.period_start desc`, [ctx.tenant.id, ctx.actor.employeeId])).rows;

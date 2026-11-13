@@ -30,6 +30,28 @@ export function BalanceTable({ balances }) {
   );
 }
 
+/** Today's work log: hours and tasks logged today, with a quick "log a task" button. */
+function TodayWorkLog() {
+  const { t, tz } = useApp();
+  const today = todayIn(tz);
+  const { data, error } = useLoad(() => get(`/tasks${qs({ from: today, to: today })}`), [today]);
+  const logs = data?.logs ?? [];
+  const hours = Math.round(logs.reduce((n, l) => n + l.hours, 0) * 100) / 100;
+  return (
+    <Card title={t('ui.todays_work_log', "Today's work log")} actions={<a className="btn sm primary" href="#/tasks?new=1">+ {t('ui.log_task', 'Log a daily task')}</a>}>
+      {error ? <ErrorBox error={error} /> : !data ? <Loading /> : logs.length === 0 ? <Empty>{t('ui.no_tasks_today', 'Nothing logged yet today.')}</Empty> : (
+        <>
+          <p className="small muted">{t('ui.logged_today', '{hours} h logged in {n} task(s)', { hours, n: logs.length })}</p>
+          <table className="table"><tbody>{logs.slice(0, 5).map((l) => (
+            <tr key={l.id}><td>{l.title}</td><td className="num">{l.hours} h</td><td><StatusBadge status={l.status} /></td></tr>
+          ))}</tbody></table>
+          {logs.length > 5 && <a className="small" href="#/tasks">{t('ui.see_all', 'See all')}</a>}
+        </>
+      )}
+    </Card>
+  );
+}
+
 export default function MyDashboard() {
   const { t, tz, session } = useApp();
   const [month, setMonth] = useState(monthOf(todayIn(tz)));
@@ -38,10 +60,11 @@ export default function MyDashboard() {
   if (error) return <ErrorBox error={error} />;
   const d = data;
   const today = todayIn(tz);
+  const has = (m) => !!session.modules?.includes(m);
   return (
     <div className="stack lg">
       <PageHead title={`${t('ui.hello', 'Hello')}, ${session.employee?.full_name?.split(' ')[0] ?? ''}`} subtitle={fmtDate(today, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })} />
-      <CheckInCard today={d.today} onDone={reload} />
+      {has('attendance') && <CheckInCard today={d.today} onDone={reload} />}
       <div className="grid stats">
         <Stat label={t('ui.days_present', 'Days in office')} value={d.month.totals.present} sub={monthLabel(month)} />
         <Stat label={t('ui.days_wfh', 'WFH days')} value={d.month.totals.wfh} />
@@ -57,9 +80,10 @@ export default function MyDashboard() {
           <p className="small muted">{t('ui.worked_this_month', 'Worked')} {hm(d.month.totals.workedMinutes)} · {t('ui.overtime', 'Overtime')} {hm(d.month.totals.overtimeMinutes)}</p>
         </Card>
         <div className="stack lg">
-          <Card title={t('ui.leave_balances', 'Leave balances')} actions={<a className="btn sm" href="#/requests">{t('ui.apply', 'Apply')}</a>}>
+          {has('tasks') && <TodayWorkLog />}
+          {has('leave') && <Card title={t('ui.leave_balances', 'Leave balances')} actions={<a className="btn sm" href="#/requests">{t('ui.apply', 'Apply')}</a>}>
             <BalanceTable balances={d.balances} />
-          </Card>
+          </Card>}
           <Card title={t('ui.recent_requests', 'Recent requests')}>
             {d.leaveRequests.length + d.wfhRequests.length === 0 ? <Empty>{t('ui.no_requests', 'No requests yet.')}</Empty> : (
               <table className="table"><tbody>
@@ -68,11 +92,11 @@ export default function MyDashboard() {
               </tbody></table>
             )}
           </Card>
-          <Card title={t('ui.payslips', 'Payslips')}>
+          {has('payroll') && <Card title={t('ui.payslips', 'Payslips')}>
             {d.payslips.length === 0 ? <Empty>{t('ui.no_payslips', 'Payslips appear here after payroll is locked.')}</Empty> : (
               <table className="table"><tbody>{d.payslips.slice(0, 4).map((p) => <tr key={p.id}><td><a href={`#/payslips?id=${p.id}`}>{monthLabel(p.period_key)}</a></td><td className="num">{fmtMoney(p.net)}</td></tr>)}</tbody></table>
             )}
-          </Card>
+          </Card>}
         </div>
       </div>
     </div>

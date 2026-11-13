@@ -9,7 +9,7 @@ import { Alert, Button, Empty, ErrorBox, Input, Modal, StatusBadge } from './ui.
 export const PAYMENT_METHODS = [['bank_transfer', 'Bank transfer'], ['cash', 'Cash'], ['cheque', 'Cheque'], ['card', 'Card'], ['online', 'Online'], ['other', 'Other']];
 export const MODULE_LABELS = {
   attendance: 'Attendance', wfh: 'Work from home', leave: 'Leave', payroll: 'Payroll', overtime: 'Overtime',
-  loans: 'Loans & advances', auto_checkin: 'Auto check-in', selfie_verification: 'Selfie verification',
+  loans: 'Loans & advances', auto_checkin: 'Auto check-in', selfie_verification: 'Selfie verification', tasks: 'Daily tasks',
 };
 export const MODULES = Object.keys(MODULE_LABELS);
 

@@ -12,6 +12,7 @@ import ResetPassword from './pages/ResetPassword.jsx';
 import MyDashboard from './pages/MyDashboard.jsx';
 import Attendance from './pages/Attendance.jsx';
 import Requests from './pages/Requests.jsx';
+import Tasks from './pages/Tasks.jsx';
 import Team from './pages/Team.jsx';
 import Approvals from './pages/Approvals.jsx';
 import HrDashboard from './pages/HrDashboard.jsx';
@@ -32,7 +33,7 @@ import AdminBilling from './pages/admin/Billing.jsx';
 import PlatformSettings from './pages/admin/PlatformSettings.jsx';
 
 const ROUTES = [
-  ['/', MyDashboard], ['/attendance', Attendance], ['/requests', Requests],
+  ['/', MyDashboard], ['/attendance', Attendance], ['/requests', Requests], ['/tasks', Tasks],
   ['/team', Team, 'manager'], ['/approvals', Approvals, 'manager'],
   ['/payslips', Payslips],
   ['/hr', HrDashboard, 'hr'], ['/employees', Employees, 'hr'], ['/payroll', Payroll, 'hr'], ['/salaries', Salaries, 'hr'],

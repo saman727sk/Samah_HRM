@@ -368,3 +368,101 @@ export async function cancelCorrection(ctx, id) {
     await audit(db, ctx, { action: 'attendance.correction_cancelled', entityType: 'attendance_correction', entityId: id, oldValue: c });
   });
 }
+
+// ---------------------------------------------------------------------
+// Manual attendance: HR (anyone) or a manager (their reports) records a
+// check-in and/or check-out for someone else, e.g. a forgotten phone.
+// New 'manual' events, never edits; who entered it and why are kept on
+// the event and in the audit log, and the employee is notified.
+// ---------------------------------------------------------------------
+const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+async function eventsBetween(ctx, employeeId, from, to) {
+  return (await ctx.db.query(
+    `select e.* from attendance_events e where e.tenant_id = $1 and e.employee_id = $2 and e.punch_time > $3 and e.punch_time <= $4 and ${EFFECTIVE}
+      order by e.punch_time, e.created_at`, [ctx.tenant.id, employeeId, from, to])).rows;
+}
+
+async function firstEventAfter(ctx, employeeId, instant) {
+  return ctx.db.one(
+    `select e.* from attendance_events e where e.tenant_id = $1 and e.employee_id = $2 and e.punch_time > $3 and ${EFFECTIVE}
+      order by e.punch_time, e.created_at limit 1`, [ctx.tenant.id, employeeId, instant]);
+}
+
+/**
+ * input: { employeeId, workDate: 'YYYY-MM-DD', checkIn?: 'HH:MM', checkOut?: 'HH:MM', reason }
+ * A check-out earlier than the check-in is the next morning (night shift).
+ * Only a check-out: closes the open check-in of that date.
+ */
+export async function recordManual(ctx, { employeeId, workDate, checkIn, checkOut, reason: why } = {}) {
+  await requireModule(ctx, 'attendance');
+  await assertCanManage(ctx, employeeId);
+  const employee = await getEmployee(ctx, employeeId);
+  const tz = ctx.tenant.timezone;
+  if (!isYmd(workDate)) throw badRequest('manual_invalid', 'Choose the date.');
+  checkIn ||= null;
+  checkOut ||= null;
+  if (!checkIn && !checkOut) throw badRequest('manual_invalid', 'Enter a check-in time, a check-out time, or both.');
+  if ([checkIn, checkOut].some((v) => v && !HHMM.test(v))) throw badRequest('manual_invalid', 'Times must look like 09:00 (24-hour).');
+  if (!why?.trim()) throw badRequest('manual_invalid', 'Give a reason. It is shown to the employee and kept in the audit log.');
+  if (why.length > 500) throw badRequest('manual_invalid', 'Keep the reason under 500 characters.');
+  if (workDate < employee.joining_date || (employee.exit_date && workDate > employee.exit_date)) {
+    throw notAllowed([reason('attendance.manual_not_employed', { date: workDate })]);
+  }
+  const locked = await lockedPeriodFor(ctx, workDate);
+  if (locked) throw notAllowed([reason('attendance.period_locked', { date: workDate, period: locked.period_key })]);
+
+  const now = ctx.clock.now();
+  let inAt = checkIn ? zonedInstant(workDate, checkIn, tz) : null;
+  let outAt = checkOut ? zonedInstant(workDate, checkOut, tz) : null;
+  let openIn = null;
+  if (inAt && outAt && outAt <= inAt) outAt = zonedInstant(addDays(workDate, 1), checkOut, tz);
+  if (!inAt) {
+    // Closing an open check-in of that date.
+    openIn = await ctx.db.one(
+      `select e.* from attendance_events e where e.tenant_id = $1 and e.employee_id = $2 and e.work_date = $3 and ${EFFECTIVE}
+        order by e.punch_time desc, e.created_at desc limit 1`, [ctx.tenant.id, employee.id, workDate]);
+    if (openIn?.event_type !== 'in') throw notAllowed([reason('attendance.manual_no_check_in', { date: workDate })]);
+    if (outAt <= openIn.punch_time) outAt = zonedInstant(addDays(workDate, 1), checkOut, tz);
+  }
+  if ((inAt && inAt > now) || (outAt && outAt > now)) throw notAllowed([reason('attendance.manual_in_future')]);
+
+  // It must fit around what is already recorded.
+  const overlap = (ev) => notAllowed([reason('attendance.manual_overlaps', { time: localTime(ev.punch_time, tz) })]);
+  if (inAt) {
+    const before = await lastEventAtOrBefore(ctx, employee.id, inAt);
+    if (before?.event_type === 'in') throw overlap(before);
+    if (outAt) {
+      const inside = await eventsBetween(ctx, employee.id, inAt, outAt);
+      if (inside.length) throw overlap(inside[0]);
+    } else {
+      const next = await firstEventAfter(ctx, employee.id, inAt);
+      if (next?.event_type === 'in') throw notAllowed([reason('attendance.manual_open_after', { time: localTime(next.punch_time, tz) })]);
+    }
+  } else {
+    const inside = await eventsBetween(ctx, employee.id, openIn.punch_time, outAt);
+    if (inside.length) throw overlap(inside[0]);
+  }
+
+  const note = why.trim();
+  const events = await ctx.db.tx(async (db) => {
+    const rows = [];
+    for (const [type, at] of [['in', inAt], ['out', outAt]]) {
+      if (!at) continue;
+      rows.push(await db.one(
+        `insert into attendance_events (tenant_id, employee_id, event_type, server_time, punch_time, work_date, method, time_verified, flags, entered_by, note)
+         values ($1, $2, $3, $4, $5, $6, 'manual', true, '["manual"]', $7, $8) returning *`,
+        [ctx.tenant.id, employee.id, type, now, at, workDate, ctx.actor?.userId ?? null, note]));
+    }
+    await audit(db, ctx, { action: 'attendance.manual_entry', entityType: 'employee', entityId: employee.id,
+      newValue: { workDate, checkIn, checkOut, reason: note, eventIds: rows.map((r) => r.id) } });
+    return rows;
+  });
+  const enteredBy = ctx.actor?.employeeId
+    ? (await ctx.db.one('select full_name from employees where id = $1', [ctx.actor.employeeId]))?.full_name : null;
+  const times = [checkIn && `in ${checkIn}`, checkOut && `out ${checkOut}`].filter(Boolean).join(', ');
+  await notify(ctx, { userIds: [await userOfEmployee(ctx, employee.id)], event: 'attendance_recorded',
+    params: { date: workDate, times, reason: note, enteredBy: enteredBy ?? 'HR' } });
+  const [day] = await daySummaries(ctx, employee.id, { from: workDate, to: workDate });
+  return { events, day };
+}

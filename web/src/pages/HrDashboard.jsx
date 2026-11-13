@@ -6,11 +6,13 @@ import { PageHead } from '../components/Layout.jsx';
 import StackedBars from '../components/StackedBars.jsx';
 import { TodayBoard } from './Team.jsx';
 import { Button, Card, Empty, ErrorBox, Loading, Stat, StatusBadge, useLoad } from '../components/ui.jsx';
+import { ManualAttendanceModal } from '../components/ManualAttendance.jsx';
 
 export default function HrDashboard() {
   const { t, toast, tz } = useApp();
   const [month, setMonth] = useState(monthOf(todayIn(tz)));
-  const { data, error, loading } = useLoad(() => get(`/dashboard/hr${qs({ month })}`), [month]);
+  const [manual, setManual] = useState(false);
+  const { data, error, loading, reload } = useLoad(() => get(`/dashboard/hr${qs({ month })}`), [month]);
   const exportCsv = (detail) => download(`/reports/attendance.csv${qs({ month, detail })}`, `attendance-${detail}-${month}.csv`).catch((e) => toast(e.message, 'bad'));
   if (loading && !data) return <Loading />;
   if (error) return <ErrorBox error={error} />;
@@ -23,7 +25,9 @@ export default function HrDashboard() {
         <Button aria-label="Next month" onClick={() => setMonth(shiftMonth(month, 1))}>›</Button>
         <Button icon="download" onClick={() => exportCsv('daily')}>{t('ui.csv_daily', 'CSV (daily)')}</Button>
         <Button icon="download" onClick={() => exportCsv('summary')}>{t('ui.csv_summary', 'CSV (summary)')}</Button>
-        <Button icon="printer" onClick={() => window.print()}>{t('ui.pdf', 'PDF / print')}</Button></>} />
+        <Button icon="printer" onClick={() => window.print()}>{t('ui.pdf', 'PDF / print')}</Button>
+        <Button kind="primary" icon="clock" onClick={() => setManual(true)}>{t('ui.record_attendance', 'Record attendance')}</Button></>} />
+      {manual && <ManualAttendanceModal onClose={() => setManual(false)} onDone={reload} />}
 
       <Card title={`${t('ui.today', 'Today')} — ${fmtDay(d.today.date)}`}><TodayBoard board={d.today} /></Card>
 

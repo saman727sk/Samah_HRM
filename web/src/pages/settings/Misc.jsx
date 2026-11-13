@@ -15,6 +15,7 @@ const MODULE_HELP = {
   selfie_verification: 'Selfie check for WFH check-in (a registered device is always accepted as the non-biometric alternative).',
   overtime: 'Overtime requests and payment.',
   loans: 'Loans and salary advances.',
+  tasks: 'Daily tasks and work logs with files; blocked tasks alert the manager.',
 };
 
 export function Features() {

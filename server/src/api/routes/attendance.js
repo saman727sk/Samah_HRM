@@ -1,5 +1,5 @@
 import {
-  cancelCorrection, daySummaries, listCorrections, punch, requestCorrection, timeAnchor, todayStatus,
+  cancelCorrection, daySummaries, listCorrections, punch, recordManual, requestCorrection, timeAnchor, todayStatus,
 } from '../../services/attendance.js';
 import { requireHr } from '../../services/access.js';
 import { runTenantJobs } from '../../services/jobs.js';
@@ -15,6 +15,9 @@ export default async function attendanceRoutes(app) {
   });
   app.get('/today', async (req) => todayStatus(req.ctx, me(req, req.query.employeeId)));
   app.get('/days', async (req) => daySummaries(req.ctx, me(req, req.query.employeeId), { from: req.query.from, to: req.query.to }));
+
+  /** HR / a manager records attendance for someone else (forgot to check in, phone broken...). */
+  app.post('/manual', async (req, reply) => reply.status(201).send(await recordManual(req.ctx, req.body ?? {})));
 
   app.get('/corrections', async (req) => listCorrections(req.ctx, { employeeId: req.query.employeeId, status: req.query.status }));
   app.post('/corrections', async (req, reply) =>
