@@ -1,0 +1,26 @@
+{
+  "name": "@hrm/server",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "dev": "node --env-file-if-exists=.env --watch src/index.js",
+    "start": "node --env-file-if-exists=.env src/index.js",
+    "migrate": "node --env-file-if-exists=.env src/db/migrate-cli.js",
+    "seed": "node --env-file-if-exists=.env seed/seed-cli.js",
+    "email:test": "node --env-file-if-exists=.env src/services/email-test-cli.js",
+    "test": "node --test --test-concurrency=4 \"test/**/*.test.js\""
+  },
+  "dependencies": {
+    "@electric-sql/pglite": "^0.5.12",
+    "bcryptjs": "^3.0.3",
+    "fastify": "^5.12.7",
+    "firebase-admin": "^13.10.0",
+    "jsonwebtoken": "^9.0.3",
+    "nodemailer": "^10.3.1",
+    "pdfkit": "^0.17.2",
+    "pg": "^8.23.1",
+    "stripe": "^23.1.0"
+  }
+}

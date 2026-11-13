@@ -1,0 +1,1107 @@
+{
+  "_notice": "Starting data copied into every new company. Everything here becomes normal, editable rows (lookups, published v1 settings, templates). Leave quotas, statutory leave and holiday dates are EXAMPLES: verify them with your HR policy, labour law and your accountant before going live. Islamic holiday dates depend on moon sighting; confirm with the official notification each year. Payroll components, formulas, the minimum wage and the income-tax table are EXAMPLES too (Pakistan, tax year 2026): verify every rate and slab with your accountant and the current Finance Act before running payroll.",
+  "translations": {
+    "en": {
+      "wfh.date_in_past": "{date} is in the past.",
+      "wfh.weekend": "{date} is a weekend day.",
+      "wfh.holiday": "{date} is a public holiday ({name}).",
+      "wfh.already_requested": "You already have a WFH request for {date}.",
+      "wfh.on_leave": "You are on leave on {date}.",
+      "wfh.disabled": "Work from home is not available under your policy.",
+      "wfh.min_notice": "WFH must be requested at least {days} day(s) in advance ({date}).",
+      "wfh.weekday_not_allowed": "WFH is not allowed on {day}. Allowed days: {allowed}.",
+      "wfh.blackout": "{date} is a WFH blackout date: {reason}.",
+      "wfh.probation": "WFH is not available during probation (until {until}).",
+      "wfh.min_service": "WFH needs {required} months of service; you have {months}.",
+      "wfh.role_not_allowed": "Your role is not eligible for WFH.",
+      "wfh.weekly_limit": "{used} of {max} WFH days used this week.",
+      "wfh.monthly_limit": "{used} of {max} WFH days used this month.",
+      "wfh.recurring_not_allowed": "Recurring WFH requests are not allowed.",
+      "wfh.recurring_too_long": "A recurring WFH request can cover at most {max} weeks.",
+      "wfh.multiple_dates_not_allowed": "Only one date per WFH request is allowed.",
+      "wfh.no_dates": "The selected pattern does not include any dates.",
+      "leave.dates_invalid": "The end date is before the start date.",
+      "leave.crosses_year": "Leave cannot cross the leave-year end ({yearEnd}). Please split it into two requests.",
+      "leave.half_day_not_allowed": "Half-day is not allowed for this leave type.",
+      "leave.hourly_not_allowed": "Hourly leave is not allowed for this leave type.",
+      "leave.partial_day_single_date": "Half-day and hourly leave must be for a single date.",
+      "leave.min_notice": "This leave must be requested at least {days} day(s) in advance.",
+      "leave.backdated_limit": "This leave can be applied at most {days} day(s) after the date.",
+      "leave.max_consecutive": "At most {max} consecutive days are allowed; you requested {requested}.",
+      "leave.probation": "This leave type is not available during probation (until {until}).",
+      "leave.overlap": "You already have leave from {start} to {end}.",
+      "leave.no_working_days": "The selected dates contain no working days.",
+      "leave.certificate_required": "A medical certificate is required for more than {days} day(s).",
+      "leave.insufficient_balance": "Not enough balance: you requested {requested} day(s) but {available} are available.",
+      "leave.converted_to_unpaid": "{paid} day(s) will be paid from your balance and {unpaid} day(s) will be unpaid.",
+      "leave.team_clash": "{count} people in your team are already off on {date} (warning from {max}).",
+      "setting_missing": "No published {key} rule applies on {date}. Ask HR to publish one.",
+      "attendance.already_checked_in": "You are already checked in (since {since}).",
+      "attendance.not_checked_in": "You are not checked in.",
+      "attendance.location_required": "Your location is needed to check in at the office.",
+      "attendance.location_consent_required": "Please accept the location consent before checking in.",
+      "attendance.selfie_consent_required": "Please accept the selfie consent, or check in from a registered device instead.",
+      "attendance.outside_geofence": "You are {distance} m from {office}; check-in is allowed within {radius} m.",
+      "attendance.no_office": "No office location with a geofence is set up. Ask HR to add one.",
+      "attendance.no_wfh_approval": "You don't have an approved WFH day for {date}.",
+      "attendance.wfh_verification_required": "Your WFH policy needs a selfie or a registered device to check in.",
+      "attendance.device_not_registered": "Check in from a registered device or network.",
+      "attendance.method_not_allowed": "This check-in method ({method}) is not enabled.",
+      "attendance.offline_too_old": "Offline punches older than {days} days can't be synced.",
+      "attendance.offline_in_future": "The punch time is in the future; check the device clock.",
+      "attendance.period_locked": "{date} is in a locked payroll period ({period}). Ask HR for an adjustment in the next payroll.",
+      "attendance.correction_in_future": "You can't correct a time in the future.",
+      "request.leave": "Leave request",
+      "request.wfh": "WFH request",
+      "request.attendance_correction": "Attendance correction",
+      "approver.manager": "your manager",
+      "approver.skip_level_manager": "your manager's manager",
+      "approver.hr": "HR",
+      "notify.approval_needed.title": "Approval needed: {requestLabel}",
+      "notify.approval_needed.body": "{employeeName} requested {summary}.",
+      "notify.request_submitted.title": "{requestLabel} submitted",
+      "notify.request_submitted.body": "Your request ({summary}) is waiting for approval.",
+      "notify.request_approved.title": "{requestLabel} approved",
+      "notify.request_approved.body": "{employeeName}: {summary} was approved.",
+      "notify.request_rejected.title": "{requestLabel} rejected",
+      "notify.request_rejected.body": "{employeeName}: {summary} was rejected. {comment}",
+      "notify.request_escalated.title": "Escalated: {requestLabel}",
+      "notify.request_escalated.body": "{employeeName}'s request ({summary}) was not decided in time and moved to the next approver.",
+      "notify.request_cancelled.title": "{requestLabel} cancelled",
+      "notify.request_cancelled.body": "{employeeName} cancelled {summary}.",
+      "notify.checkout_auto_closed.title": "Missed check-out on {date}",
+      "notify.checkout_auto_closed.body": "Your session was closed automatically at {time}. Request a correction if this is wrong.",
+      "status.in_office": "In office",
+      "status.wfh": "Work from home",
+      "status.on_leave": "On leave",
+      "status.absent": "Absent",
+      "request.overtime": "Overtime claim",
+      "leave.period_locked": "{date} is in a locked payroll period ({period}). Ask HR for an adjustment in the next payroll.",
+      "overtime.period_locked": "{date} is in a locked payroll period ({period}).",
+      "overtime.in_future": "{date} hasn't happened yet.",
+      "overtime.none_recorded": "No overtime was recorded on {date}.",
+      "overtime.too_many_minutes": "You can claim at most {max} minutes for {date}.",
+      "overtime.below_minimum": "Overtime under {min} minutes a day isn't paid.",
+      "overtime.already_claimed": "You already claimed overtime for {date}.",
+      "notify.payslip_ready.title": "Your payslip for {period} is ready",
+      "notify.payslip_ready.body": "Net pay: {net}. Open My payslips to download it.",
+      "nav.payroll": "Payroll",
+      "nav.salaries": "Salaries & loans",
+      "nav.payslips": "My payslips",
+      "nav.overtime": "Overtime",
+      "status.review": "In review",
+      "status.locked": "Locked",
+      "ui.payslips_sub": "Your payslips appear here once HR locks the month's payroll.",
+      "ui.month": "Month",
+      "ui.gross": "Gross",
+      "ui.deductions": "Deductions",
+      "ui.net_pay": "Net pay",
+      "ui.view": "View",
+      "ui.claim_overtime": "Claim overtime",
+      "ui.minutes": "Minutes to claim",
+      "ui.overtime_recorded": "Attendance recorded {time} of overtime that day.",
+      "ui.no_overtime_recorded": "No overtime was recorded that day.",
+      "ui.overtime_submitted": "Overtime claim sent for approval."
+    },
+    "ur": {
+      "wfh.weekly_limit": "اس ہفتے {max} میں سے {used} ورک فرام ہوم دن استعمال ہو چکے ہیں۔",
+      "wfh.monthly_limit": "اس مہینے {max} میں سے {used} ورک فرام ہوم دن استعمال ہو چکے ہیں۔",
+      "wfh.min_notice": "ورک فرام ہوم کی درخواست کم از کم {days} دن پہلے دیں ({date})۔",
+      "wfh.weekend": "{date} ہفتہ وار چھٹی کا دن ہے۔",
+      "wfh.holiday": "{date} کو عام تعطیل ہے ({name})۔",
+      "leave.insufficient_balance": "بیلنس ناکافی ہے: آپ نے {requested} دن مانگے، {available} دستیاب ہیں۔",
+      "attendance.already_checked_in": "آپ پہلے ہی چیک ان ہیں ({since} سے)۔",
+      "attendance.outside_geofence": "آپ {office} سے {distance} میٹر دور ہیں؛ چیک ان {radius} میٹر کے اندر ممکن ہے۔",
+      "request.leave": "چھٹی کی درخواست",
+      "request.wfh": "گھر سے کام کی درخواست",
+      "notify.approval_needed.title": "منظوری درکار: {requestLabel}",
+      "notify.request_approved.title": "{requestLabel} منظور ہو گئی",
+      "status.in_office": "دفتر میں",
+      "status.wfh": "گھر سے کام",
+      "status.on_leave": "چھٹی پر",
+      "status.absent": "غیر حاضر",
+      "nav.my_dashboard": "میرا ڈیش بورڈ",
+      "nav.attendance": "میری حاضری",
+      "nav.requests": "چھٹی اور گھر سے کام",
+      "nav.team_section": "ٹیم",
+      "nav.team": "ٹیم ڈیش بورڈ",
+      "nav.approvals": "منظوریاں",
+      "nav.hr_section": "ایچ آر",
+      "nav.hr_dashboard": "ایچ آر ڈیش بورڈ",
+      "nav.employees": "ملازمین",
+      "nav.settings_section": "ترتیبات",
+      "nav.policies": "پالیسیاں اور قواعد",
+      "nav.lists": "فہرستیں اور دفاتر",
+      "nav.features": "ماڈیولز",
+      "nav.transfer": "درآمد / برآمد",
+      "nav.audit": "آڈٹ لاگ",
+      "ui.hello": "السلام علیکم",
+      "ui.today": "آج",
+      "ui.check_in_office": "چیک اِن",
+      "ui.check_in_wfh": "چیک اِن (گھر سے)",
+      "ui.check_out": "چیک آؤٹ",
+      "ui.not_checked_in": "ابھی چیک اِن نہیں کیا",
+      "ui.since": "چیک اِن",
+      "ui.shift": "شفٹ",
+      "ui.days_present": "دفتر میں دن",
+      "ui.days_wfh": "گھر سے کام کے دن",
+      "ui.days_leave": "چھٹی کے دن",
+      "ui.late_arrivals": "تاخیر سے آمد",
+      "ui.wfh_left_week": "اس ہفتے باقی گھر سے کام",
+      "ui.this_month": "اس مہینے",
+      "ui.leave_balances": "چھٹیوں کا بیلنس",
+      "ui.apply": "درخواست دیں",
+      "ui.leave_type": "چھٹی کی قسم",
+      "ui.entitled": "حق",
+      "ui.accrued": "جمع شدہ",
+      "ui.used": "استعمال شدہ",
+      "ui.pending": "زیر التوا",
+      "ui.available": "دستیاب",
+      "ui.recent_requests": "حالیہ درخواستیں",
+      "ui.payslips": "تنخواہ کی پرچیاں",
+      "ui.no_payslips": "پے رول لاک ہونے کے بعد تنخواہ کی پرچیاں یہاں نظر آئیں گی۔",
+      "ui.worked_this_month": "کام کیا",
+      "ui.overtime": "اوور ٹائم",
+      "ui.send_request": "درخواست بھیجیں",
+      "ui.approve": "منظور کریں",
+      "ui.reject": "مسترد کریں",
+      "ui.cancel": "منسوخ کریں",
+      "status.not_yet": "چیک اِن نہیں",
+      "status.holiday": "تعطیل",
+      "status.weekend": "ہفتہ وار چھٹی",
+      "status.pending": "زیر التوا",
+      "status.approved": "منظور",
+      "status.rejected": "مسترد",
+      "status.cancelled": "منسوخ",
+      "cal.present": "دفتر",
+      "cal.wfh": "گھر سے",
+      "cal.absent": "غیر حاضر",
+      "flag.late": "تاخیر",
+      "flag.missed_checkout": "چیک آؤٹ رہ گیا",
+      "flag.unverified_time": "غیر تصدیق شدہ وقت",
+      "flag.overtime": "اوور ٹائم",
+      "request.overtime": "اوور ٹائم کا دعویٰ",
+      "leave.period_locked": "{date} ایک مقفل پے رول مدت ({period}) میں ہے۔ اگلے پے رول میں ایڈجسٹمنٹ کے لیے HR سے رابطہ کریں۔",
+      "overtime.period_locked": "{date} ایک مقفل پے رول مدت ({period}) میں ہے۔",
+      "overtime.in_future": "{date} ابھی آیا نہیں۔",
+      "overtime.none_recorded": "{date} کو کوئی اوور ٹائم درج نہیں ہوا۔",
+      "overtime.too_many_minutes": "آپ {date} کے لیے زیادہ سے زیادہ {max} منٹ کا دعویٰ کر سکتے ہیں۔",
+      "overtime.below_minimum": "روزانہ {min} منٹ سے کم اوور ٹائم کی ادائیگی نہیں ہوتی۔",
+      "overtime.already_claimed": "آپ {date} کے اوور ٹائم کا دعویٰ پہلے ہی کر چکے ہیں۔",
+      "notify.payslip_ready.title": "{period} کی تنخواہ کی پرچی تیار ہے",
+      "notify.payslip_ready.body": "خالص تنخواہ: {net}۔ ڈاؤن لوڈ کرنے کے لیے \"میری تنخواہ کی پرچیاں\" کھولیں۔",
+      "nav.payroll": "پے رول",
+      "nav.salaries": "تنخواہیں اور قرض",
+      "nav.payslips": "میری تنخواہ کی پرچیاں",
+      "nav.overtime": "اوور ٹائم",
+      "status.review": "زیرِ جائزہ",
+      "status.locked": "مقفل",
+      "ui.payslips_sub": "ماہانہ پے رول مقفل ہونے کے بعد آپ کی تنخواہ کی پرچیاں یہاں نظر آئیں گی۔",
+      "ui.month": "مہینہ",
+      "ui.gross": "کل آمدن",
+      "ui.deductions": "کٹوتیاں",
+      "ui.net_pay": "خالص تنخواہ",
+      "ui.view": "دیکھیں",
+      "ui.claim_overtime": "اوور ٹائم کا دعویٰ",
+      "ui.minutes": "دعوے کے منٹ",
+      "ui.overtime_recorded": "اس دن حاضری میں {time} اوور ٹائم درج ہوا۔",
+      "ui.no_overtime_recorded": "اس دن کوئی اوور ٹائم درج نہیں ہوا۔",
+      "ui.overtime_submitted": "اوور ٹائم کا دعویٰ منظوری کے لیے بھیج دیا گیا۔"
+    }
+  },
+  "globalTemplates": [
+    {
+      "key": "wfh.policy",
+      "code": "hybrid-2",
+      "name": "Hybrid 2 days",
+      "description": "Two WFH days a week on weekdays, manager approval.",
+      "value": {
+        "enabled": true,
+        "maxPerWeek": 2,
+        "maxPerMonth": 8,
+        "allowedWeekdays": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "blackoutDates": [],
+        "eligibility": {
+          "blockDuringProbation": true,
+          "minServiceMonths": 0,
+          "allowedRoleIds": []
+        },
+        "requests": {
+          "minNoticeDays": 1,
+          "allowMultipleDates": true,
+          "allowRecurring": true,
+          "maxRecurringWeeks": 12,
+          "approval": "manager",
+          "countPendingInQuota": true
+        },
+        "verification": "none"
+      }
+    },
+    {
+      "key": "wfh.policy",
+      "code": "fully-onsite",
+      "name": "Fully on-site",
+      "description": "No work from home.",
+      "value": {
+        "enabled": false,
+        "maxPerWeek": 0,
+        "maxPerMonth": 0,
+        "allowedWeekdays": [],
+        "blackoutDates": [],
+        "eligibility": {
+          "blockDuringProbation": true,
+          "minServiceMonths": 0,
+          "allowedRoleIds": []
+        },
+        "requests": {
+          "minNoticeDays": 1,
+          "allowMultipleDates": false,
+          "allowRecurring": false,
+          "maxRecurringWeeks": 1,
+          "approval": "manager",
+          "countPendingInQuota": true
+        },
+        "verification": "none"
+      }
+    },
+    {
+      "key": "wfh.policy",
+      "code": "remote-first",
+      "name": "Remote first",
+      "description": "WFH any weekday, auto-approved within limits, selfie check-in.",
+      "value": {
+        "enabled": true,
+        "maxPerWeek": 5,
+        "maxPerMonth": 23,
+        "allowedWeekdays": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "blackoutDates": [],
+        "eligibility": {
+          "blockDuringProbation": false,
+          "minServiceMonths": 0,
+          "allowedRoleIds": []
+        },
+        "requests": {
+          "minNoticeDays": 0,
+          "allowMultipleDates": true,
+          "allowRecurring": true,
+          "maxRecurringWeeks": 26,
+          "approval": "auto_within_limits",
+          "countPendingInQuota": true
+        },
+        "verification": "selfie"
+      }
+    },
+    {
+      "key": "leave.type",
+      "code": "standard-annual-20",
+      "name": "Standard annual leave (20 days)",
+      "description": "Example values — verify with your HR policy.",
+      "value": {
+        "paid": true,
+        "entitlementDays": 20,
+        "accrual": {
+          "enabled": false,
+          "daysPerMonth": 0,
+          "postOn": "month_start"
+        },
+        "proRate": {
+          "joiners": true,
+          "leavers": true,
+          "roundingStep": 0.5
+        },
+        "probationEntitlementDays": null,
+        "allowDuringProbation": false,
+        "tenureBands": [],
+        "carryForward": {
+          "maxDays": 10,
+          "expiryMonths": 3
+        },
+        "encashment": {
+          "allowed": true,
+          "maxDays": 10
+        },
+        "maxConsecutiveDays": 15,
+        "minNoticeDays": 7,
+        "maxBackdatedDays": 0,
+        "medicalCertificateAfterDays": null,
+        "allowHalfDay": true,
+        "allowHourly": false,
+        "countWeekends": false,
+        "countHolidays": false,
+        "insufficientBalance": "reject"
+      }
+    },
+    {
+      "key": "leave.type",
+      "code": "standard-30",
+      "name": "Standard 30 leaves (accrued 2.5/month)",
+      "description": "30 days a year accrued monthly. Example values — verify with your HR policy.",
+      "value": {
+        "paid": true,
+        "entitlementDays": 30,
+        "accrual": {
+          "enabled": true,
+          "daysPerMonth": 2.5,
+          "postOn": "month_start"
+        },
+        "proRate": {
+          "joiners": true,
+          "leavers": true,
+          "roundingStep": 0.5
+        },
+        "probationEntitlementDays": null,
+        "allowDuringProbation": true,
+        "tenureBands": [],
+        "carryForward": {
+          "maxDays": 15,
+          "expiryMonths": 6
+        },
+        "encashment": {
+          "allowed": true,
+          "maxDays": 15
+        },
+        "maxConsecutiveDays": 20,
+        "minNoticeDays": 7,
+        "maxBackdatedDays": 0,
+        "medicalCertificateAfterDays": null,
+        "allowHalfDay": true,
+        "allowHourly": false,
+        "countWeekends": false,
+        "countHolidays": false,
+        "insufficientBalance": "reject"
+      }
+    }
+  ],
+  "tenant": {
+    "featureFlags": {
+      "attendance": true,
+      "wfh": true,
+      "leave": true,
+      "payroll": true,
+      "auto_checkin": false,
+      "selfie_verification": false,
+      "overtime": false,
+      "loans": false
+    },
+    "employmentTypes": [
+      {
+        "code": "PERM",
+        "name": "Permanent"
+      },
+      {
+        "code": "CONTRACT",
+        "name": "Contract"
+      },
+      {
+        "code": "INTERN",
+        "name": "Intern"
+      }
+    ],
+    "settings": {
+      "attendance.calendar": {
+        "weekendDays": [
+          0,
+          6
+        ],
+        "weekStartsOn": 1
+      },
+      "wfh.policy": {
+        "fromTemplate": "hybrid-2"
+      },
+      "leave.year": {
+        "startMonth": 1,
+        "startDay": 1
+      },
+      "leave.rules": {
+        "teamClashMaxOff": 2,
+        "hoursPerDay": 8
+      },
+      "attendance.rules": {
+        "autoCloseTime": "23:30",
+        "maxClockSkewMinutes": 5,
+        "requireLocationConsent": true,
+        "allowedMethods": [
+          "office_auto",
+          "office_manual",
+          "wfh"
+        ],
+        "exitGraceMinutes": 10,
+        "maxOfflineDays": 7
+      },
+      "workflow.leave": {
+        "steps": [
+          {
+            "approver": "manager"
+          }
+        ],
+        "autoApprove": {
+          "enabled": false,
+          "maxDays": null,
+          "leaveTypeIds": []
+        },
+        "escalation": {
+          "afterDays": 2,
+          "to": "hr"
+        },
+        "notify": {
+          "channels": [
+            "in_app",
+            "email"
+          ],
+          "onSubmit": [
+            "approver"
+          ],
+          "onDecision": [
+            "requester"
+          ],
+          "onEscalation": [
+            "approver",
+            "requester"
+          ]
+        }
+      },
+      "workflow.wfh": {
+        "steps": [
+          {
+            "approver": "manager"
+          }
+        ],
+        "autoApprove": {
+          "enabled": false,
+          "maxDays": null,
+          "leaveTypeIds": []
+        },
+        "escalation": {
+          "afterDays": 1,
+          "to": "hr"
+        },
+        "notify": {
+          "channels": [
+            "in_app"
+          ],
+          "onSubmit": [
+            "approver"
+          ],
+          "onDecision": [
+            "requester"
+          ],
+          "onEscalation": [
+            "approver"
+          ]
+        }
+      },
+      "workflow.attendance_correction": {
+        "steps": [
+          {
+            "approver": "manager"
+          }
+        ],
+        "autoApprove": {
+          "enabled": false,
+          "maxDays": null,
+          "leaveTypeIds": []
+        },
+        "escalation": {
+          "afterDays": 2,
+          "to": "hr"
+        },
+        "notify": {
+          "channels": [
+            "in_app"
+          ],
+          "onSubmit": [
+            "approver"
+          ],
+          "onDecision": [
+            "requester"
+          ],
+          "onEscalation": [
+            "approver"
+          ]
+        }
+      },
+      "payroll.rules": {
+        "ruleDate": "period_end",
+        "proRateBasis": "calendar_days",
+        "variables": {
+          "DAILY_RATE": "MONTHLY_SALARY / CALENDAR_DAYS",
+          "HOURLY_RATE": "DAILY_RATE / SHIFT_HOURS",
+          "MIN_WAGE": 40000
+        },
+        "overtime": {
+          "requireApproval": true,
+          "minMinutes": 30
+        },
+        "approval": {
+          "requireDifferentApprover": false
+        }
+      },
+      "payroll.tax": {
+        "annualSlabs": [
+          {
+            "above": 0,
+            "fixed": 0,
+            "rate": 0
+          },
+          {
+            "above": 600000,
+            "fixed": 0,
+            "rate": 1
+          },
+          {
+            "above": 1200000,
+            "fixed": 6000,
+            "rate": 11
+          },
+          {
+            "above": 2200000,
+            "fixed": 116000,
+            "rate": 23
+          },
+          {
+            "above": 3200000,
+            "fixed": 346000,
+            "rate": 30
+          },
+          {
+            "above": 4100000,
+            "fixed": 616000,
+            "rate": 35
+          }
+        ],
+        "note": "EXAMPLE: Pakistan, salaried individuals, tax year 2026 (Finance Act 2025). The surcharge on income above Rs 10 million is not included. Verify with your accountant before use."
+      },
+      "workflow.overtime": {
+        "steps": [
+          {
+            "approver": "manager"
+          }
+        ],
+        "autoApprove": {
+          "enabled": false,
+          "maxDays": null,
+          "leaveTypeIds": []
+        },
+        "escalation": {
+          "afterDays": 2,
+          "to": "hr"
+        },
+        "notify": {
+          "channels": [
+            "in_app"
+          ],
+          "onSubmit": [
+            "approver"
+          ],
+          "onDecision": [
+            "requester"
+          ],
+          "onEscalation": [
+            "approver"
+          ]
+        }
+      }
+    },
+    "leaveTypes": [
+      {
+        "code": "ANNUAL",
+        "name": "Annual Leave",
+        "color": "#2563eb",
+        "rules": {
+          "fromTemplate": "standard-annual-20"
+        }
+      },
+      {
+        "code": "CASUAL",
+        "name": "Casual Leave",
+        "color": "#16a34a",
+        "rules": {
+          "paid": true,
+          "entitlementDays": 10,
+          "accrual": {
+            "enabled": false,
+            "daysPerMonth": 0,
+            "postOn": "month_start"
+          },
+          "proRate": {
+            "joiners": true,
+            "leavers": true,
+            "roundingStep": 0.5
+          },
+          "probationEntitlementDays": null,
+          "allowDuringProbation": true,
+          "tenureBands": [],
+          "carryForward": {
+            "maxDays": 0,
+            "expiryMonths": null
+          },
+          "encashment": {
+            "allowed": false,
+            "maxDays": 0
+          },
+          "maxConsecutiveDays": 3,
+          "minNoticeDays": 1,
+          "maxBackdatedDays": 2,
+          "medicalCertificateAfterDays": null,
+          "allowHalfDay": true,
+          "allowHourly": false,
+          "countWeekends": false,
+          "countHolidays": false,
+          "insufficientBalance": "reject"
+        }
+      },
+      {
+        "code": "SICK",
+        "name": "Sick Leave",
+        "color": "#dc2626",
+        "rules": {
+          "paid": true,
+          "entitlementDays": 8,
+          "accrual": {
+            "enabled": false,
+            "daysPerMonth": 0,
+            "postOn": "month_start"
+          },
+          "proRate": {
+            "joiners": true,
+            "leavers": false,
+            "roundingStep": 0.5
+          },
+          "probationEntitlementDays": null,
+          "allowDuringProbation": true,
+          "tenureBands": [],
+          "carryForward": {
+            "maxDays": 0,
+            "expiryMonths": null
+          },
+          "encashment": {
+            "allowed": false,
+            "maxDays": 0
+          },
+          "maxConsecutiveDays": null,
+          "minNoticeDays": 0,
+          "maxBackdatedDays": 7,
+          "medicalCertificateAfterDays": 2,
+          "allowHalfDay": true,
+          "allowHourly": false,
+          "countWeekends": false,
+          "countHolidays": false,
+          "insufficientBalance": "convert_to_unpaid"
+        }
+      },
+      {
+        "code": "UNPAID",
+        "name": "Unpaid Leave",
+        "color": "#6b7280",
+        "rules": {
+          "paid": false,
+          "entitlementDays": null,
+          "accrual": {
+            "enabled": false,
+            "daysPerMonth": 0,
+            "postOn": "month_start"
+          },
+          "proRate": {
+            "joiners": false,
+            "leavers": false,
+            "roundingStep": 0
+          },
+          "probationEntitlementDays": null,
+          "allowDuringProbation": true,
+          "tenureBands": [],
+          "carryForward": {
+            "maxDays": 0,
+            "expiryMonths": null
+          },
+          "encashment": {
+            "allowed": false,
+            "maxDays": 0
+          },
+          "maxConsecutiveDays": 30,
+          "minNoticeDays": 3,
+          "maxBackdatedDays": 0,
+          "medicalCertificateAfterDays": null,
+          "allowHalfDay": true,
+          "allowHourly": false,
+          "countWeekends": false,
+          "countHolidays": false,
+          "insufficientBalance": "reject"
+        }
+      },
+      {
+        "code": "MATERNITY",
+        "name": "Maternity Leave",
+        "color": "#db2777",
+        "rules": {
+          "paid": true,
+          "entitlementDays": 90,
+          "accrual": {
+            "enabled": false,
+            "daysPerMonth": 0,
+            "postOn": "month_start"
+          },
+          "proRate": {
+            "joiners": false,
+            "leavers": false,
+            "roundingStep": 0
+          },
+          "probationEntitlementDays": null,
+          "allowDuringProbation": true,
+          "tenureBands": [],
+          "carryForward": {
+            "maxDays": 0,
+            "expiryMonths": null
+          },
+          "encashment": {
+            "allowed": false,
+            "maxDays": 0
+          },
+          "maxConsecutiveDays": 90,
+          "minNoticeDays": 30,
+          "maxBackdatedDays": 0,
+          "medicalCertificateAfterDays": 0,
+          "allowHalfDay": false,
+          "allowHourly": false,
+          "countWeekends": true,
+          "countHolidays": true,
+          "insufficientBalance": "reject"
+        }
+      },
+      {
+        "code": "PATERNITY",
+        "name": "Paternity Leave",
+        "color": "#7c3aed",
+        "rules": {
+          "paid": true,
+          "entitlementDays": 7,
+          "accrual": {
+            "enabled": false,
+            "daysPerMonth": 0,
+            "postOn": "month_start"
+          },
+          "proRate": {
+            "joiners": false,
+            "leavers": false,
+            "roundingStep": 0
+          },
+          "probationEntitlementDays": null,
+          "allowDuringProbation": true,
+          "tenureBands": [],
+          "carryForward": {
+            "maxDays": 0,
+            "expiryMonths": null
+          },
+          "encashment": {
+            "allowed": false,
+            "maxDays": 0
+          },
+          "maxConsecutiveDays": 7,
+          "minNoticeDays": 7,
+          "maxBackdatedDays": 3,
+          "medicalCertificateAfterDays": null,
+          "allowHalfDay": false,
+          "allowHourly": false,
+          "countWeekends": false,
+          "countHolidays": false,
+          "insufficientBalance": "reject"
+        }
+      },
+      {
+        "code": "BEREAVEMENT",
+        "name": "Bereavement Leave",
+        "color": "#0f172a",
+        "rules": {
+          "paid": true,
+          "entitlementDays": 3,
+          "accrual": {
+            "enabled": false,
+            "daysPerMonth": 0,
+            "postOn": "month_start"
+          },
+          "proRate": {
+            "joiners": false,
+            "leavers": false,
+            "roundingStep": 0
+          },
+          "probationEntitlementDays": null,
+          "allowDuringProbation": true,
+          "tenureBands": [],
+          "carryForward": {
+            "maxDays": 0,
+            "expiryMonths": null
+          },
+          "encashment": {
+            "allowed": false,
+            "maxDays": 0
+          },
+          "maxConsecutiveDays": 3,
+          "minNoticeDays": 0,
+          "maxBackdatedDays": 7,
+          "medicalCertificateAfterDays": null,
+          "allowHalfDay": false,
+          "allowHourly": false,
+          "countWeekends": false,
+          "countHolidays": false,
+          "insufficientBalance": "reject"
+        }
+      }
+    ],
+    "holidayCalendars": [
+      {
+        "code": "PK",
+        "name": "Pakistan public holidays",
+        "is_default": true,
+        "holidays": [
+          {
+            "date": "2026-02-05",
+            "name": "Kashmir Solidarity Day"
+          },
+          {
+            "date": "2026-03-20",
+            "name": "Eid ul Fitr",
+            "note": "Approximate - depends on moon sighting"
+          },
+          {
+            "date": "2026-03-21",
+            "name": "Eid ul Fitr",
+            "note": "Approximate - depends on moon sighting"
+          },
+          {
+            "date": "2026-03-22",
+            "name": "Eid ul Fitr",
+            "note": "Approximate - depends on moon sighting"
+          },
+          {
+            "date": "2026-03-23",
+            "name": "Pakistan Day"
+          },
+          {
+            "date": "2026-05-01",
+            "name": "Labour Day"
+          },
+          {
+            "date": "2026-05-27",
+            "name": "Eid ul Adha",
+            "note": "Approximate - depends on moon sighting"
+          },
+          {
+            "date": "2026-05-28",
+            "name": "Eid ul Adha",
+            "note": "Approximate - depends on moon sighting"
+          },
+          {
+            "date": "2026-06-25",
+            "name": "Ashura",
+            "note": "Approximate - depends on moon sighting"
+          },
+          {
+            "date": "2026-06-26",
+            "name": "Ashura",
+            "note": "Approximate - depends on moon sighting"
+          },
+          {
+            "date": "2026-08-14",
+            "name": "Independence Day"
+          },
+          {
+            "date": "2026-08-26",
+            "name": "Eid Milad un Nabi",
+            "note": "Approximate - depends on moon sighting"
+          },
+          {
+            "date": "2026-11-09",
+            "name": "Iqbal Day"
+          },
+          {
+            "date": "2026-12-25",
+            "name": "Quaid-e-Azam Day"
+          }
+        ]
+      }
+    ],
+    "shifts": [
+      {
+        "code": "GENERAL",
+        "name": "General (9 to 6)",
+        "rules": {
+          "start": "09:00",
+          "end": "18:00",
+          "graceMinutes": 15,
+          "halfDayLateMinutes": 120,
+          "fullDayMinHours": 8,
+          "halfDayMinHours": 4
+        }
+      }
+    ],
+    "salaryComponents": [
+      {
+        "code": "BASIC",
+        "name": "Basic salary",
+        "kind": "earning",
+        "rules": {
+          "enabled": true,
+          "calculation": "structure",
+          "formula": null,
+          "proRate": true,
+          "taxable": true,
+          "showIfZero": true
+        }
+      },
+      {
+        "code": "HRA",
+        "name": "House rent allowance",
+        "kind": "earning",
+        "rules": {
+          "enabled": true,
+          "calculation": "structure",
+          "formula": null,
+          "proRate": true,
+          "taxable": true,
+          "showIfZero": false
+        }
+      },
+      {
+        "code": "MEDICAL",
+        "name": "Medical allowance",
+        "kind": "earning",
+        "rules": {
+          "enabled": true,
+          "calculation": "structure",
+          "formula": null,
+          "proRate": true,
+          "taxable": false,
+          "showIfZero": false
+        }
+      },
+      {
+        "code": "OVERTIME",
+        "name": "Overtime",
+        "kind": "earning",
+        "rules": {
+          "enabled": true,
+          "calculation": "formula",
+          "formula": "round(OT_HOURS * HOURLY_RATE * 1.5 + OT_OFFDAY_HOURS * HOURLY_RATE * 2)",
+          "proRate": false,
+          "taxable": true,
+          "showIfZero": false
+        }
+      },
+      {
+        "code": "ABSENT",
+        "name": "Absence deduction",
+        "kind": "deduction",
+        "rules": {
+          "enabled": true,
+          "calculation": "formula",
+          "formula": "round((ABSENT_DAYS + HALF_DAYS * 0.5) * DAILY_RATE)",
+          "proRate": false,
+          "taxable": true,
+          "showIfZero": false
+        }
+      },
+      {
+        "code": "LATE",
+        "name": "Late arrival deduction",
+        "kind": "deduction",
+        "rules": {
+          "enabled": true,
+          "calculation": "formula",
+          "formula": "round(floor(LATE_COUNT / 3) * DAILY_RATE)",
+          "proRate": false,
+          "taxable": true,
+          "showIfZero": false
+        }
+      },
+      {
+        "code": "UNPAID_LEAVE",
+        "name": "Unpaid leave deduction",
+        "kind": "deduction",
+        "rules": {
+          "enabled": true,
+          "calculation": "formula",
+          "formula": "round(UNPAID_LEAVE_DAYS * DAILY_RATE)",
+          "proRate": false,
+          "taxable": true,
+          "showIfZero": false
+        }
+      },
+      {
+        "code": "TAX",
+        "name": "Income tax",
+        "kind": "deduction",
+        "rules": {
+          "enabled": true,
+          "calculation": "formula",
+          "formula": "round(tax(max(TAXABLE_EARNINGS - ABSENT - LATE - UNPAID_LEAVE, 0) * 12) / 12)",
+          "proRate": false,
+          "taxable": true,
+          "showIfZero": false
+        }
+      },
+      {
+        "code": "EOBI",
+        "name": "EOBI (employee share)",
+        "kind": "deduction",
+        "rules": {
+          "enabled": true,
+          "calculation": "formula",
+          "formula": "round(MIN_WAGE * 0.01)",
+          "proRate": false,
+          "taxable": true,
+          "showIfZero": false
+        }
+      },
+      {
+        "code": "PF",
+        "name": "Provident fund",
+        "kind": "deduction",
+        "rules": {
+          "enabled": false,
+          "calculation": "formula",
+          "formula": "round(BASIC * 0.0833)",
+          "proRate": false,
+          "taxable": true,
+          "showIfZero": false
+        }
+      },
+      {
+        "code": "LOAN",
+        "name": "Loan / advance recovery",
+        "kind": "deduction",
+        "rules": {
+          "enabled": true,
+          "calculation": "formula",
+          "formula": "LOAN_INSTALLMENT",
+          "proRate": false,
+          "taxable": true,
+          "showIfZero": false
+        }
+      },
+      {
+        "code": "EOBI_ER",
+        "name": "EOBI (employer share)",
+        "kind": "employer",
+        "rules": {
+          "enabled": true,
+          "calculation": "formula",
+          "formula": "round(MIN_WAGE * 0.05)",
+          "proRate": false,
+          "taxable": true,
+          "showIfZero": false
+        }
+      }
+    ]
+  }
+}

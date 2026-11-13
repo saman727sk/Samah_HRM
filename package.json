@@ -1,0 +1,17 @@
+{
+  "name": "hrm-saas",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "server",
+    "web"
+  ],
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "dev:server": "npm run dev -w server",
+    "dev:web": "npm run dev -w web",
+    "seed": "npm run seed -w server",
+    "test": "npm test -w server",
+    "share": "npm run build -w web && npm run preview -w web"
+  }
+}
