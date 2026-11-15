@@ -1,6 +1,6 @@
 /**
  * Background jobs, run by the scheduler in src/index.js (and on demand by HR):
- * auto-close forgotten sessions, escalate overdue approvals, billing, send emails.
+ * auto-close forgotten sessions, escalate overdue approvals, the morning "tasks for today" reminder, billing, send emails.
  * Importing this module also registers every workflow request handler.
  */
 import { autoCloseSessions } from './attendance.js';
@@ -8,6 +8,7 @@ import { runBillingJobs } from './billing.js';
 import { purgeExpiredSignups } from './signup.js';
 import { dispatchEmails } from './notifications.js';
 import { runEscalations } from './workflow.js';
+import { sendDailyDigests } from './assignedTasks.js';
 import './leave.js';
 import './wfh.js';
 import './overtime.js';
@@ -17,7 +18,7 @@ const systemCtx = (db, clock, tenant, jwtSecret) => ({ db, clock, tenant, jwtSec
 
 export async function runTenantJobs(db, clock, tenant) {
   const ctx = systemCtx(db, clock, tenant);
-  return { autoClosed: await autoCloseSessions(ctx), escalated: await runEscalations(ctx) };
+  return { autoClosed: await autoCloseSessions(ctx), escalated: await runEscalations(ctx), taskReminders: await sendDailyDigests(ctx) };
 }
 
 export async function runAllJobs(db, clock, { transport } = {}) {

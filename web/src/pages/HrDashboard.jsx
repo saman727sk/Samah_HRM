@@ -39,9 +39,9 @@ export default function HrDashboard() {
         </Card>
         <Card title={t('ui.pending_and_payroll', 'Approvals & payroll')}>
           <div className="grid stats">
-            <Stat label={t('ui.pending_leave', 'Pending leave')} value={d.pendingApprovals.leave} />
-            <Stat label={t('ui.pending_wfh', 'Pending WFH')} value={d.pendingApprovals.wfh} />
-            <Stat label={t('ui.pending_corrections', 'Corrections')} value={d.pendingApprovals.corrections} />
+            <Stat icon="calendar" label={t('ui.pending_leave', 'Pending leave')} value={d.pendingApprovals.leave} />
+            <Stat icon="home" label={t('ui.pending_wfh', 'Pending WFH')} value={d.pendingApprovals.wfh} />
+            <Stat icon="history" label={t('ui.pending_corrections', 'Corrections')} value={d.pendingApprovals.corrections} />
           </div>
           <h3 style={{ margin: '18px 0 8px' }}>{t('ui.payroll_status', 'Payroll')}</h3>
           {d.payroll.length === 0 ? <p className="muted small">{t('ui.no_payroll', 'No payroll runs yet (payroll arrives in Phase 4).')}</p> : (

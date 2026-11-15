@@ -1,6 +1,7 @@
 /** SaaS owner (super admin): companies, plans, subscriptions, invoices, payments. */
 import { badRequest, conflict, forbidden, notFound } from '../../lib/errors.js';
 import * as billing from '../../services/billing.js';
+import * as companyAdmin from '../../services/companyAdmin.js';
 import * as submissions from '../../services/paymentSubmissions.js';
 import { assertEmailFree, createEmployee } from '../../services/employees.js';
 import { loadDefaults, provisionTenant } from '../../services/tenants.js';
@@ -45,6 +46,13 @@ export default async function adminRoutes(app) {
         login: { email: admin.email.trim(), password: admin.password, accessLevel: 'hr_admin' } });
     }
     return reply.status(201).send(tenant);
+  });
+
+  app.patch('/tenants/:id', async (req) => companyAdmin.updateCompany(req.ctx, req.params.id, req.body ?? {}));
+  app.delete('/tenants/:id', async (req) => companyAdmin.deleteCompany(req.ctx, req.params.id, req.body ?? {}));
+  app.patch('/tenants/:id/logins/:userId', async (req) => {
+    if (!UUID.test(req.params.userId)) throw notFound();
+    return companyAdmin.updateLogin(req.ctx, req.params.id, req.params.userId, req.body ?? {});
   });
 
   app.post('/tenants/:id/plan', async (req) => billing.changePlan(req.ctx, req.params.id, req.body ?? {}));

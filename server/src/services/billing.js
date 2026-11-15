@@ -837,7 +837,7 @@ export async function companyDetail(db, tenantId) {
     subscriptionOf(db, tenantId), usageOf(db, tenantId), listInvoices(db, { tenantId }), listPayments(db, { tenantId }),
     db.query(`select e.*, u.email as actor_email from subscription_events e left join users u on u.id = e.actor_user_id
                where e.tenant_id = $1 order by e.created_at desc limit 100`, [tenantId]).then((r) => r.rows),
-    db.query(`select u.email, u.is_active, u.created_at, e.full_name from users u left join employees e on e.user_id = u.id
+    db.query(`select u.id, u.email, u.is_active, u.created_at, u.firebase_uid is not null as firebase, e.full_name from users u left join employees e on e.user_id = u.id
                where u.tenant_id = $1 and u.access_level = 'hr_admin' order by u.created_at`, [tenantId]).then((r) => r.rows),
   ]);
   return { tenant, subscription, usage, invoices, payments, events, admins };

@@ -5,6 +5,28 @@ import { fmtDate, fmtMoney, hm, monthLabel, monthOf, shiftMonth, todayIn } from 
 import { PageHead } from '../components/Layout.jsx';
 import { CheckInCard, MonthCalendar } from '../components/attendance.jsx';
 import { Button, Card, Empty, ErrorBox, Loading, Stat, StatusBadge, useLoad } from '../components/ui.jsx';
+import { Due, Priority, TaskStatus } from './AssignedTasks.jsx';
+
+/** The next 7 days: the rota shift, Off, or the usual shift. */
+function MyRota() {
+  const { t } = useApp();
+  const { data } = useLoad(() => get('/rota/me?days=7'), []);
+  if (!data?.days?.length) return null;
+  return (
+    <Card title={t('ui.my_rota', 'My shifts: next 7 days')}>
+      <div className="my-rota">
+        {data.days.map((d, i) => (
+          <div key={d.date} className={`my-rota-day ${d.off ? 'off' : ''} ${d.source === 'rota' ? 'from-rota' : ''} ${i === 0 ? 'today' : ''}`}>
+            <div className="small muted">{i === 0 ? t('ui.today', 'Today') : fmtDate(d.date, { weekday: 'short' })} · {fmtDate(d.date, { day: 'numeric', month: 'short' })}</div>
+            <strong>{d.holiday ?? (d.off ? t('ui.off', 'Off') : d.shift?.name ?? '—')}</strong>
+            <div className="small">{!d.off && !d.holiday && d.shift?.start ? `${d.shift.start}–${d.shift.end}` : ' '}</div>
+            {d.source === 'rota' && <span className="badge info">{t('ui.rota', 'Rota')}</span>}
+          </div>
+        ))}
+      </div>
+    </Card>
+  );
+}
 
 export function BalanceTable({ balances }) {
   const { t } = useApp();
@@ -27,6 +49,29 @@ export function BalanceTable({ balances }) {
         </tbody>
       </table>
     </div>
+  );
+}
+
+/** Tasks my manager gave me: overdue, due today and in the next 7 days. */
+function MyTasks() {
+  const { tz } = useApp();
+  const today = todayIn(tz);
+  const { data } = useLoad(() => get('/assigned-tasks/me'), []);
+  if (!data?.tasks?.length) return null;
+  const now = data.tasks.filter((x) => x.due_date <= today);
+  return (
+    <Card title={now.length ? `My tasks for today (${now.length})` : 'My tasks this week'} actions={<a className="btn sm" href="#/tasks">See all</a>}>
+      <ul className="my-tasks">
+        {data.tasks.slice(0, 6).map((tk) => (
+          <li key={tk.id}><a href={`#/tasks?task=${tk.id}`}>
+            <span style={{ minWidth: 0 }}><strong>{tk.title}</strong> <Priority priority={tk.priority} />
+              <div className="small muted">from {tk.assigned_by_name}{tk.messages ? ` · ${tk.messages} ${tk.messages === 1 ? 'message' : 'messages'}` : ''}</div></span>
+            <span className="row" style={{ gap: 6, flexWrap: 'nowrap' }}><Due task={tk} today={today} /><TaskStatus status={tk.status} /></span>
+          </a></li>
+        ))}
+      </ul>
+      {data.tasks.length > 6 && <a className="small" href="#/tasks">and {data.tasks.length - 6} more</a>}
+    </Card>
   );
 }
 
@@ -66,12 +111,14 @@ export default function MyDashboard() {
       <PageHead title={`${t('ui.hello', 'Hello')}, ${session.employee?.full_name?.split(' ')[0] ?? ''}`} subtitle={fmtDate(today, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })} />
       {has('attendance') && <CheckInCard today={d.today} onDone={reload} />}
       <div className="grid stats">
-        <Stat label={t('ui.days_present', 'Days in office')} value={d.month.totals.present} sub={monthLabel(month)} />
-        <Stat label={t('ui.days_wfh', 'WFH days')} value={d.month.totals.wfh} />
-        <Stat label={t('ui.days_leave', 'Leave days')} value={d.month.totals.onLeave} />
-        <Stat label={t('ui.late_arrivals', 'Late arrivals')} value={d.month.totals.late} />
-        {d.wfhQuota && <Stat label={t('ui.wfh_left_week', 'WFH left this week')} value={`${d.wfhQuota.week.remaining}/${d.wfhQuota.week.max}`} sub={`${d.wfhQuota.month.remaining}/${d.wfhQuota.month.max} ${t('ui.this_month', 'this month')}`} />}
+        <Stat icon="check" label={t('ui.days_present', 'Days in office')} value={d.month.totals.present} sub={monthLabel(month)} />
+        <Stat icon="home" label={t('ui.days_wfh', 'WFH days')} value={d.month.totals.wfh} />
+        <Stat icon="calendar" label={t('ui.days_leave', 'Leave days')} value={d.month.totals.onLeave} />
+        <Stat icon="clock" label={t('ui.late_arrivals', 'Late arrivals')} value={d.month.totals.late} />
+        {d.wfhQuota && <Stat icon="home" label={t('ui.wfh_left_week', 'WFH left this week')} value={`${d.wfhQuota.week.remaining}/${d.wfhQuota.week.max}`} sub={`${d.wfhQuota.month.remaining}/${d.wfhQuota.month.max} ${t('ui.this_month', 'this month')}`} />}
       </div>
+      {has('tasks') && <MyTasks />}
+      {has('attendance') && <MyRota />}
       <div className="grid cols-2">
         <Card title={monthLabel(month)} actions={<>
           <Button size="sm" aria-label="Previous month" onClick={() => setMonth(shiftMonth(month, -1))}>‹</Button>

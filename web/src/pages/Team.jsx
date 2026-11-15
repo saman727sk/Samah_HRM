@@ -11,12 +11,12 @@ export function TodayBoard({ board }) {
   return (
     <div className="stack">
       <div className="grid stats">
-        <Stat label={t('status.in_office', 'In office')} value={board.counts.present} />
-        <Stat label={t('status.wfh', 'Work from home')} value={board.counts.wfh} />
-        <Stat label={t('status.on_leave', 'On leave')} value={board.counts.on_leave} />
-        <Stat label={t('status.absent', 'Absent')} value={board.counts.absent} />
-        <Stat label={t('ui.not_yet_in', 'Not yet in')} value={board.counts.not_yet} />
-        <Stat label={t('ui.late', 'Late')} value={board.counts.late} />
+        <Stat icon="check" label={t('status.in_office', 'In office')} value={board.counts.present} />
+        <Stat icon="home" label={t('status.wfh', 'Work from home')} value={board.counts.wfh} />
+        <Stat icon="calendar" label={t('status.on_leave', 'On leave')} value={board.counts.on_leave} />
+        <Stat icon="x" label={t('status.absent', 'Absent')} value={board.counts.absent} />
+        <Stat icon="clock" label={t('ui.not_yet_in', 'Not yet in')} value={board.counts.not_yet} />
+        <Stat icon="alert" label={t('ui.late', 'Late')} value={board.counts.late} />
       </div>
       <div className="table-wrap"><table className="table">
         <thead><tr><th>{t('ui.name', 'Name')}</th><th>{t('ui.department', 'Department')}</th><th>{t('ui.status', 'Status')}</th><th>{t('ui.first_in', 'First in')}</th><th>{t('ui.flags', 'Notes')}</th></tr></thead>

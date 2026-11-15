@@ -35,9 +35,14 @@ const EFFECTIVE = `e.id not in (select target_event_id from attendance_correctio
 export const attendanceRules = async (ctx, employee, date) =>
   (await resolveRequired(ctx.db, { tenantId: ctx.tenant.id, key: 'attendance.rules', employee, date })).value;
 
+/** The shift's rules on a date: the rota's shift for that day if one is set, else the person's usual shift. */
 export async function shiftRule(ctx, employee, date) {
-  if (!employee.shift_id) return null;
-  const r = await resolve(ctx.db, { tenantId: ctx.tenant.id, key: 'shift.rules', subjectId: employee.shift_id, employee, date });
+  const rota = employee.id
+    ? await ctx.db.one('select shift_id, is_off from rota_entries where tenant_id = $1 and employee_id = $2 and date = $3', [ctx.tenant.id, employee.id, date])
+    : null;
+  const shiftId = rota?.shift_id ?? (rota?.is_off ? null : employee.shift_id);
+  if (!shiftId) return null;
+  const r = await resolve(ctx.db, { tenantId: ctx.tenant.id, key: 'shift.rules', subjectId: shiftId, employee, date });
   return r.found ? r.value : null;
 }
 

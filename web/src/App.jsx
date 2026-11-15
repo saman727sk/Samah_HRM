@@ -31,10 +31,12 @@ import Company from './pages/admin/Company.jsx';
 import Plans from './pages/admin/Plans.jsx';
 import AdminBilling from './pages/admin/Billing.jsx';
 import PlatformSettings from './pages/admin/PlatformSettings.jsx';
+import Rota from './pages/Rota.jsx';
+import HelpDesk from './pages/HelpDesk.jsx';
 
 const ROUTES = [
   ['/', MyDashboard], ['/attendance', Attendance], ['/requests', Requests], ['/tasks', Tasks],
-  ['/team', Team, 'manager'], ['/approvals', Approvals, 'manager'],
+  ['/team', Team, 'manager'], ['/approvals', Approvals, 'manager'], ['/rota', Rota, 'manager'], ['/helpdesk', HelpDesk],
   ['/payslips', Payslips],
   ['/hr', HrDashboard, 'hr'], ['/employees', Employees, 'hr'], ['/payroll', Payroll, 'hr'], ['/salaries', Salaries, 'hr'],
   ['/settings/policies', Policies, 'hr'], ['/settings/lists', Lists, 'hr'], ['/settings/features', Features, 'hr'],

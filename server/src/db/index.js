@@ -10,7 +10,7 @@
  *            exec(sql), tx(fn), close()
  * DATE columns are returned as 'YYYY-MM-DD' strings and NUMERIC as numbers.
  */
-import { readFileSync, unlinkSync, writeFileSync } from 'node:fs';
+import { readFileSync, statSync, unlinkSync, utimesSync, writeFileSync } from 'node:fs';
 import { mkdir } from 'node:fs/promises';
 import path from 'node:path';
 import { PGlite } from '@electric-sql/pglite';
@@ -44,23 +44,36 @@ function wrap(runner, { tx, close }) {
 
 /**
  * Embedded Postgres must have a single owner: two processes opening the same
- * folder corrupt it. A lock file next to the folder records the owner's PID;
- * a second process is refused while that PID is alive (a dead owner's lock
- * is taken over).
+ * folder corrupt it. A lock file next to the folder records the owner's PID,
+ * and the owner touches it every LOCK_HEARTBEAT_MS. A second process is
+ * refused only while that PID is alive AND the lock is fresh. A lock left by a
+ * killed process (crash, closed terminal, --watch restart) is taken over even
+ * when the OS has since reused its PID for an unrelated process.
  */
+export const LOCK_HEARTBEAT_MS = 5_000;
+export const LOCK_STALE_MS = 30_000;
+
 function lockDataDir(dataDir) {
   const lockPath = `${path.resolve(dataDir)}.lock`;
   const alive = (pid) => { try { process.kill(pid, 0); return true; } catch (err) { return err.code === 'EPERM'; } };
+  const fresh = () => { try { return Date.now() - statSync(lockPath).mtimeMs < LOCK_STALE_MS; } catch { return false; } };
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
       writeFileSync(lockPath, String(process.pid), { flag: 'wx' });
-      const release = () => { try { if (readFileSync(lockPath, 'utf8') === String(process.pid)) unlinkSync(lockPath); } catch { /* already gone */ } };
+      const heartbeat = setInterval(() => {
+        try { const now = new Date(); utimesSync(lockPath, now, now); } catch { /* released or removed */ }
+      }, LOCK_HEARTBEAT_MS);
+      heartbeat.unref();
+      const release = () => {
+        clearInterval(heartbeat);
+        try { if (readFileSync(lockPath, 'utf8') === String(process.pid)) unlinkSync(lockPath); } catch { /* already gone */ }
+      };
       process.once('exit', release);
       return release;
     } catch (err) {
       if (err.code !== 'EEXIST') throw err;
       const owner = Number(readFileSync(lockPath, 'utf8'));
-      if (owner && owner !== process.pid && alive(owner)) {
+      if (owner && owner !== process.pid && alive(owner) && fresh()) {
         throw new Error(`The database in ${dataDir} is already open in another process (PID ${owner}). ` +
           'Only one API (or seed) may use it at a time: stop the other one first.');
       }

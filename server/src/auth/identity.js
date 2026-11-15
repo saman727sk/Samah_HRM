@@ -22,6 +22,8 @@ export const passwordProvider = (rounds = Number(process.env.BCRYPT_ROUNDS ?? 10
   },
   async removeAccount() {},
   async setDisabled() {},
+  /** Local logins keep email and hash in our own database only. */
+  async updateAccount() {},
 });
 
 /** auth: a firebase-admin Auth instance (or a test double with the same methods). */
@@ -54,6 +56,18 @@ export const firebaseProvider = (auth) => ({
   },
   async setDisabled(uid, disabled) {
     if (uid) await auth.updateUser(uid, { disabled });
+  },
+  /** Changes the Firebase account's email and/or password (undefined = unchanged). */
+  async updateAccount(uid, { email, password }) {
+    const patch = Object.fromEntries(Object.entries({ email, password }).filter(([, v]) => v !== undefined));
+    if (!uid || !Object.keys(patch).length) return;
+    try {
+      await auth.updateUser(uid, patch);
+    } catch (err) {
+      if (err.code === 'auth/email-already-exists') throw conflict('login_exists', 'A Firebase account with this email already exists.');
+      if (err.code === 'auth/invalid-password') throw conflict('login_invalid', 'Firebase rejected the password (at least 6 characters).');
+      throw err;
+    }
   },
   /** -> { uid, email } or throws */
   verifyToken: (token) => auth.verifyIdToken(token),

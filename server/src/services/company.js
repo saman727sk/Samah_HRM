@@ -31,6 +31,11 @@ export function companyProfile(tenant) {
 
 export async function updateCompanyProfile(ctx, input) {
   requireHr(ctx);
+  return saveCompanyProfile(ctx, input);
+}
+
+/** The profile change itself, without the access check (the SaaS owner edits through services/companyAdmin.js). */
+export async function saveCompanyProfile(ctx, input) {
   const clean = (v, max) => (v == null ? null : String(v).trim().slice(0, max) || null);
   const errors = [];
   const next = {};

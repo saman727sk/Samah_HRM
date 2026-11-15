@@ -12,6 +12,7 @@
     "dev:web": "npm run dev -w web",
     "seed": "npm run seed -w server",
     "create-owner": "npm run create-owner -w server --",
+    "reset-password": "npm run reset-password -w server --",
     "test": "npm test -w server",
     "share": "npm run build -w web && npm run preview -w web"
   }

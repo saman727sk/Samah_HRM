@@ -1,11 +1,13 @@
 import { useState } from 'react';
-import { get, post } from '../../lib/api.js';
-import { useApp } from '../../lib/app.jsx';
+import { api, get, patch, post } from '../../lib/api.js';
+import { navigate, useApp } from '../../lib/app.jsx';
+import CurrencySelect from '../../components/CurrencySelect.jsx';
+import TimezoneSelect from '../../components/TimezoneSelect.jsx';
 import { fmtDate, fmtMoney, humanize } from '../../lib/format.js';
 import { useConfirm } from '../../components/confirm.jsx';
 import { PageHead } from '../../components/Layout.jsx';
 import { InvoiceTable, PaymentModal, PaymentTable, ReasonModal, SubmissionTable, UsageBar, limitText, modulesText, priceText, renewalText } from '../../components/billing.jsx';
-import { Alert, Button, Card, CompanyLogo, Empty, ErrorBox, Input, Loading, Modal, StatusBadge, Switch, companyLogoUrl, useLoad } from '../../components/ui.jsx';
+import { Alert, Button, Card, CompanyLogo, Empty, ErrorBox, Input, Loading, Modal, PasswordInput, StatusBadge, Switch, companyLogoUrl, useLoad } from '../../components/ui.jsx';
 
 export default function Company({ query }) {
   const { toast } = useApp();
@@ -24,15 +26,18 @@ export default function Company({ query }) {
   return (
     <div className="stack lg">
       <a href="#/admin/companies" className="small">‹ All companies</a>
-      <PageHead title={<span className="title-with-logo"><CompanyLogo company={{ name: tenant.name, logoUrl: companyLogoUrl(tenant) }} size="lg" />{tenant.name}</span>} subtitle={<span className="mono">{tenant.slug} · {tenant.timezone} · {tenant.currency}</span>} actions={
-        tenant.status === 'pending' ? <>
+      <PageHead title={<span className="title-with-logo"><CompanyLogo company={{ name: tenant.name, logoUrl: companyLogoUrl(tenant) }} size="lg" />{tenant.name}</span>} subtitle={<span className="mono">{tenant.slug} · {tenant.timezone} · {tenant.currency}</span>} actions={<>
+        <Button icon="edit" onClick={() => setDialog({ kind: 'edit' })}>Edit company</Button>
+        {tenant.status === 'pending' ? <>
           <Button kind="primary" icon="check" onClick={async () => (await confirm({ title: `Approve ${tenant.name}?`, confirmLabel: 'Approve',
             message: 'Its users can sign in straight away, its free trial starts today, and the owner is emailed.' }))
             && act('approve', {}, `${tenant.name} approved; their free trial starts today.`).catch((e) => toast(e.message, 'bad'))}>Approve</Button>
           <Button kind="danger" onClick={() => setDialog({ kind: 'reject' })}>Reject</Button></>
           : tenant.status === 'suspended'
             ? <Button onClick={() => setDialog({ kind: 'reactivate' })}>Reactivate company</Button>
-            : <Button kind="danger" icon="lock" onClick={() => setDialog({ kind: 'suspend' })}>Suspend company</Button>} />
+            : <Button kind="danger" icon="lock" onClick={() => setDialog({ kind: 'suspend' })}>Suspend company</Button>}
+        <Button kind="danger" icon="trash" onClick={() => setDialog({ kind: 'delete' })}>Delete company</Button>
+      </>} />
 
       {tenant.status === 'pending' && (
         <Alert kind="warn" title="Waiting for your approval">
@@ -72,8 +77,11 @@ export default function Company({ query }) {
             <p className="small muted" style={{ margin: 0 }}>{usage.total_employees} employee records in total · {usage.offices} active offices</p>
             <h3 style={{ margin: '8px 0 0' }}>HR admins</h3>
             {d.admins.length === 0 ? <p className="small muted">No HR admin login yet.</p> : (
-              <ul style={{ margin: 0, paddingInlineStart: 18 }}>{d.admins.map((a) => (
-                <li key={a.email}>{a.full_name ?? '—'} · <span className="mono">{a.email}</span>{!a.is_active && <> <span className="badge">Disabled</span></>}</li>
+              <ul className="stack" style={{ margin: 0, padding: 0, listStyle: 'none', gap: 8 }}>{d.admins.map((a) => (
+                <li key={a.id} className="row" style={{ justifyContent: 'space-between', flexWrap: 'nowrap', gap: 8 }}>
+                  <span style={{ minWidth: 0, overflowWrap: 'anywhere' }}>{a.full_name ?? '—'} · <span className="mono">{a.email}</span>{!a.is_active && <> <span className="badge">Disabled</span></>}</span>
+                  <Button size="sm" icon="edit" onClick={() => setDialog({ kind: 'login', login: a })}>Edit</Button>
+                </li>
               ))}</ul>
             )}
           </div>
@@ -124,6 +132,10 @@ export default function Company({ query }) {
         <ReasonModal title={`Reactivate ${tenant.name}`} label="Note (optional)" action="Reactivate" onClose={close}
           onSubmit={(reason) => act('reactivate', { reason }, 'Company reactivated.')} />
       )}
+      {dialog?.kind === 'edit' && <EditCompanyDialog tenant={tenant} onClose={close} onDone={() => done('Company details saved.')} />}
+      {dialog?.kind === 'login' && <EditLoginDialog tenantId={id} login={dialog.login} onClose={close} onDone={(msg) => done(msg)} />}
+      {dialog?.kind === 'delete' && <DeleteCompanyDialog tenant={tenant} usage={usage} onClose={close}
+        onDone={() => { toast(`${tenant.name} and all its data were deleted.`); navigate('/admin/companies'); }} />}
       {dialog?.kind === 'pay' && <PaymentModal invoice={{ ...dialog.invoice, company: tenant.name }} onClose={close} onDone={() => done()} />}
       {dialog?.kind === 'void' && (
         <ReasonModal title={`Void ${dialog.invoice.number}`} action="Void invoice" danger onClose={close}
@@ -238,6 +250,77 @@ function CancelDialog({ sub, onClose, onSave }) {
         {canWait && <Switch label={`At the end of the paid period (${fmtDate(sub.current_period_end)})`} checked={atPeriodEnd} onChange={setAtPeriodEnd} />}
         <Alert kind="warn">{atPeriodEnd ? 'The company keeps access until then and is not billed again.' : 'Access stops now. Data is kept, and assigning a plan reactivates the company.'}</Alert>
         <Input label="Reason" as="textarea" rows={3} value={reason} onChange={(e) => setReason(e.target.value)} />
+        <ErrorBox error={s.err} />
+      </div>
+    </Modal>
+  );
+}
+
+function EditCompanyDialog({ tenant, onClose, onDone }) {
+  const [f, setF] = useState({ name: tenant.name ?? '', slug: tenant.slug ?? '', timezone: tenant.timezone, currency: tenant.currency,
+    contactEmail: tenant.contact_email ?? '', phone: tenant.phone ?? '', country: tenant.country ?? '', address: tenant.address ?? '' });
+  const set = (k) => (e) => setF({ ...f, [k]: e?.target ? e.target.value : e });
+  const s = useSave(async (body) => { await patch(`/admin/tenants/${tenant.id}`, body); onDone(); }, onClose);
+  return (
+    <Modal title={`Edit ${tenant.name}`} onClose={onClose} wide
+      footer={<><Button onClick={onClose}>Cancel</Button><Button kind="primary" disabled={s.busy} onClick={() => s.save(f)}>Save changes</Button></>}>
+      <div className="stack">
+        <div className="form-grid">
+          <Input label="Company name" value={f.name} onChange={set('name')} />
+          <Input label="Slug" help="Lowercase letters, numbers and dashes" value={f.slug} onChange={set('slug')} />
+          <Input label="Contact email" type="email" value={f.contactEmail} onChange={set('contactEmail')} />
+          <Input label="Phone" value={f.phone} onChange={set('phone')} />
+          <Input label="Country" value={f.country} onChange={set('country')} />
+          <Input label="Address" value={f.address} onChange={set('address')} />
+          <TimezoneSelect help="Attendance and payroll dates use it" value={f.timezone} onChange={set('timezone')} />
+          <CurrencySelect help="Can't change after the first payroll run" value={f.currency} onChange={set('currency')} />
+        </div>
+        <ErrorBox error={s.err} />
+      </div>
+    </Modal>
+  );
+}
+
+function EditLoginDialog({ tenantId, login, onClose, onDone }) {
+  const [f, setF] = useState({ fullName: login.full_name ?? '', email: login.email, password: '' });
+  const s = useSave(async () => {
+    const body = { email: f.email };
+    if (f.fullName.trim() && f.fullName !== login.full_name) body.fullName = f.fullName;
+    if (f.password) body.password = f.password;
+    const { changed } = await patch(`/admin/tenants/${tenantId}/logins/${login.id}`, body);
+    onDone(changed.length ? `Saved: ${changed.join(', ')} changed.` : 'Nothing changed.');
+  }, onClose);
+  return (
+    <Modal title="Edit HR admin login" onClose={onClose}
+      footer={<><Button onClick={onClose}>Cancel</Button><Button kind="primary" disabled={s.busy} onClick={() => s.save()}>Save</Button></>}>
+      <div className="stack">
+        <Input label="Full name" value={f.fullName} onChange={(e) => setF({ ...f, fullName: e.target.value })} />
+        <Input label="Sign-in email" type="email" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} />
+        <PasswordInput label="New password" help="Leave empty to keep the current one. At least 8 characters; they are signed out everywhere."
+          autoComplete="new-password" value={f.password} onChange={(e) => setF({ ...f, password: e.target.value })} />
+        <ErrorBox error={s.err} />
+      </div>
+    </Modal>
+  );
+}
+
+function DeleteCompanyDialog({ tenant, usage, onClose, onDone }) {
+  const [typed, setTyped] = useState('');
+  const s = useSave(async () => {
+    await api(`/admin/tenants/${tenant.id}`, { method: 'DELETE', body: { confirmName: typed } });
+    onDone();
+  }, onClose);
+  const ok = typed.trim().toLowerCase() === tenant.name.trim().toLowerCase();
+  return (
+    <Modal title={`Delete ${tenant.name}?`} onClose={onClose}
+      footer={<><Button onClick={onClose}>Cancel</Button><Button kind="danger" icon="trash" disabled={!ok || s.busy} onClick={() => s.save()}>Delete permanently</Button></>}>
+      <div className="stack">
+        <Alert kind="bad" title="This cannot be undone">
+          Everything in this company is deleted for good: {usage.total_employees} employee records, every login, attendance, leave,
+          payroll and payslips, tasks and files, invoices and payments. Its people can no longer sign in.
+          To only block access and keep the data, suspend the company instead.
+        </Alert>
+        <Input label={<>Type <strong>{tenant.name}</strong> to confirm</>} value={typed} onChange={(e) => setTyped(e.target.value)} autoComplete="off" />
         <ErrorBox error={s.err} />
       </div>
     </Modal>

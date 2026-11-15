@@ -1,6 +1,7 @@
 import { useState } from 'react';
+import AssignedTasks from './AssignedTasks.jsx';
 import { del, download, get, patch, post, qs } from '../lib/api.js';
-import { useApp } from '../lib/app.jsx';
+import { navigate, useApp } from '../lib/app.jsx';
 import { fmtDay, todayIn } from '../lib/format.js';
 import { useConfirm } from '../components/confirm.jsx';
 import { PageHead } from '../components/Layout.jsx';
@@ -132,7 +133,8 @@ function TaskRow({ log, showName, canEdit, canDelete, onEdit, onDelete }) {
   );
 }
 
-export default function Tasks({ query = {} }) {
+/** The person's own work log (what they did, hours, blockers, files). */
+function WorkLog({ query = {}, switcher }) {
   const { t, tz, toast, isHr, isManager, session } = useApp();
   const confirm = useConfirm();
   const today = todayIn(tz);
@@ -159,6 +161,7 @@ export default function Tasks({ query = {} }) {
     <div className="stack lg">
       <PageHead title={t('nav.tasks', 'Daily tasks')} subtitle={t('ui.tasks_sub', 'What was done, how long it took, and what is blocked.')}
         actions={<Button kind="primary" icon="plus" disabled={!me} onClick={() => setEditing({})}>{t('ui.log_task', 'Log a daily task')}</Button>} />
+      {switcher}
       {scopes.length > 1 && <Tabs tabs={scopes} value={scope} onChange={setScope} />}
       <div className="row">
         <Input label={t('ui.from', 'From')} type="date" max={range.to} value={range.from} onChange={(e) => e.target.value && setRange({ ...range, from: e.target.value })} />
@@ -172,10 +175,10 @@ export default function Tasks({ query = {} }) {
       </div>
       {data && (
         <div className="grid stats">
-          <Stat label={t('ui.hours_logged', 'Hours logged')} value={sum(logs)} />
-          <Stat label={t('status.completed', 'Completed')} value={logs.filter((l) => l.status === 'completed').length} />
-          <Stat label={t('status.in_progress', 'In progress')} value={logs.filter((l) => l.status === 'in_progress').length} />
-          <Stat label={t('status.blocked', 'Blocked')} value={blocked.length} />
+          <Stat icon="clock" label={t('ui.hours_logged', 'Hours logged')} value={sum(logs)} />
+          <Stat icon="check" label={t('status.completed', 'Completed')} value={logs.filter((l) => l.status === 'completed').length} />
+          <Stat icon="tasks" label={t('status.in_progress', 'In progress')} value={logs.filter((l) => l.status === 'in_progress').length} />
+          <Stat icon="alert" label={t('status.blocked', 'Blocked')} value={blocked.length} />
         </div>
       )}
       {scope !== 'mine' && blocked.length > 0 && !status && (
@@ -197,4 +200,15 @@ export default function Tasks({ query = {} }) {
       {editing && <TaskForm item={editing.id ? editing : null} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); reload(); }} />}
     </div>
   );
+}
+
+/**
+ * Daily tasks: "Assigned tasks" (given by a manager, discussed in a thread) and "Work log" (what I did).
+ * ?view=log, ?new=1, ?scope= or ?status= open the work log; ?task=<id> opens an assigned task.
+ */
+export default function Tasks({ query = {} }) {
+  const [view, setView] = useState(query.view === 'log' || query.new || query.scope || query.status ? 'log' : 'assigned');
+  const switcher = <Tabs tabs={[{ value: 'assigned', label: 'Assigned tasks' }, { value: 'log', label: 'Work log' }]} value={view}
+    onChange={(v) => { setView(v); if (query.task) navigate('/tasks'); }} />;
+  return view === 'log' ? <WorkLog query={query} switcher={switcher} /> : <AssignedTasks query={query} switcher={switcher} />;
 }

@@ -46,19 +46,19 @@ export default function AdminDashboard() {
       )}
 
       <div className="grid stats">
-        <Stat label="Companies" value={<CountUp value={d.companies.total} />} sub={`${d.companies.active} active · ${d.companies.pending} awaiting approval · ${d.companies.suspended} suspended`} />
-        <Stat label="On trial" value={<CountUp value={s.trialing ?? 0} />} sub={`${s.expired ?? 0} trials ended`} />
-        <Stat label="Paying subscriptions" value={<CountUp value={(s.active ?? 0) + (s.past_due ?? 0)} />} sub={`${s.past_due ?? 0} past due`} />
-        <Stat label="Paused or cancelled" value={<CountUp value={(s.unpaid ?? 0) + (s.cancelled ?? 0)} />} sub={`${s.unpaid ?? 0} unpaid · ${s.cancelled ?? 0} cancelled`} />
-        <Stat label="Users" value={<CountUp value={d.people.users} />} sub={`${d.people.employees} active employees`} />
+        <Stat icon="shield" label="Companies" value={<CountUp value={d.companies.total} />} sub={`${d.companies.active} active · ${d.companies.pending} awaiting approval · ${d.companies.suspended} suspended`} />
+        <Stat icon="clock" label="On trial" value={<CountUp value={s.trialing ?? 0} />} sub={`${s.expired ?? 0} trials ended`} />
+        <Stat icon="check" label="Paying subscriptions" value={<CountUp value={(s.active ?? 0) + (s.past_due ?? 0)} />} sub={`${s.past_due ?? 0} past due`} />
+        <Stat icon="lock" label="Paused or cancelled" value={<CountUp value={(s.unpaid ?? 0) + (s.cancelled ?? 0)} />} sub={`${s.unpaid ?? 0} unpaid · ${s.cancelled ?? 0} cancelled`} />
+        <Stat icon="users" label="Users" value={<CountUp value={d.people.users} />} sub={`${d.people.employees} active employees`} />
       </div>
 
       <div className="grid stats money">
-        <Stat label="Monthly recurring revenue" value={<Money rows={d.mrr} k="mrr" />} sub="Active and past-due subscriptions; yearly ÷ 12" />
-        <Stat label="Annual recurring revenue" value={<Money rows={d.mrr} k="arr" />} />
-        <Stat label="Collected (all time)" value={<Money rows={d.collected} k="total" />} sub={`This month: ${perCurrency(d.collected, 'this_month')}`} />
-        <Stat label="Awaiting payment" value={<Money rows={d.pending} k="amount" />} sub={`${d.pending.reduce((n, p) => n + p.invoices, 0)} open invoices`} />
-        <Stat label="Overdue" value={<Money rows={d.pending.filter((p) => p.overdue)} k="overdue_amount" />}
+        <Stat icon="chart" label="Monthly recurring revenue" value={<Money rows={d.mrr} k="mrr" />} sub="Active and past-due subscriptions; yearly ÷ 12" />
+        <Stat icon="chart" label="Annual recurring revenue" value={<Money rows={d.mrr} k="arr" />} />
+        <Stat icon="money" label="Collected (all time)" value={<Money rows={d.collected} k="total" />} sub={`This month: ${perCurrency(d.collected, 'this_month')}`} />
+        <Stat icon="file" label="Awaiting payment" value={<Money rows={d.pending} k="amount" />} sub={`${d.pending.reduce((n, p) => n + p.invoices, 0)} open invoices`} />
+        <Stat icon="alert" label="Overdue" value={<Money rows={d.pending.filter((p) => p.overdue)} k="overdue_amount" />}
           sub={`${d.pending.reduce((n, p) => n + p.overdue, 0)} invoices past their due date`} />
       </div>
 

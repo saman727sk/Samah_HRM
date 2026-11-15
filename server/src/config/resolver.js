@@ -83,7 +83,12 @@ function matchesScope(v, employee) {
 /**
  * @returns {{ found: boolean, value: object|null, sources: Array, versionIds: string[] }}
  */
-export async function resolve(db, { tenantId, key, subjectId = null, employee = null, date, simulate = null }) {
+export async function resolve(db, args) {
+  const r = await resolveOn(db, args);
+  return r.found ? r : (await resolveBeforeGoLive(db, args)) ?? r;
+}
+
+async function resolveOn(db, { tenantId, key, subjectId = null, employee = null, date, simulate = null }) {
   let versions = await publishedVersions(db, tenantId, key, subjectId);
   if (simulate) versions = applySimulation(versions, simulate);
 
@@ -104,6 +109,20 @@ export async function resolve(db, { tenantId, key, subjectId = null, employee = 
     });
   }
   return { found: sources.length > 0, value, sources, versionIds: sources.map((s) => s.versionId) };
+}
+
+/**
+ * A company's default rules take effect on its go-live date (the day it was created), but month
+ * views start on the 1st: a company created on the 10th has no rules for the 1st to the 9th, and
+ * its dashboards failed for the whole first month. Days before go-live therefore use the rules it
+ * started with. Only when nothing applies at all; a rule published for a later date still doesn't
+ * apply earlier once the company is live.
+ */
+async function resolveBeforeGoLive(db, args) {
+  const t = await db.one('select go_live_date from tenants where id = $1', [args.tenantId]);
+  if (!t?.go_live_date || !(args.date < t.go_live_date)) return null;
+  const r = await resolveOn(db, { ...args, date: t.go_live_date });
+  return r.found ? r : null;
 }
 
 /** Like resolve() but throws a clear error when nothing is configured. */

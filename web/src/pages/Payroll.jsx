@@ -121,11 +121,11 @@ function RunDetail({ id }) {
       </Card>
       {run.status === 'locked' && <Alert kind="info" title="This month is locked">Its payslips, attendance, leave and rules can no longer change. Make any correction in the next payroll.</Alert>}
       <div className="grid cols-3">
-        <Stat label="Employees paid" value={t.employees ?? 0} />
-        <Stat label="Gross pay" value={fmtMoney(t.gross)} sub={tenant.currency} />
-        <Stat label="Deductions" value={fmtMoney(t.deductions)} sub={tenant.currency} />
-        <Stat label="Net pay" value={fmtMoney(t.net)} sub={`${tenant.currency} · to transfer`} />
-        <Stat label="Employer contributions" value={fmtMoney(t.employerCost)} sub="On top of gross pay" />
+        <Stat icon="users" label="Employees paid" value={t.employees ?? 0} />
+        <Stat icon="money" label="Gross pay" value={fmtMoney(t.gross)} sub={tenant.currency} />
+        <Stat icon="file" label="Deductions" value={fmtMoney(t.deductions)} sub={tenant.currency} />
+        <Stat icon="check" label="Net pay" value={fmtMoney(t.net)} sub={`${tenant.currency} · to transfer`} />
+        <Stat icon="shield" label="Employer contributions" value={fmtMoney(t.employerCost)} sub="On top of gross pay" />
       </div>
       {warnings.length > 0 && (
         <Alert kind="warn" title={`${warnings.length} thing${warnings.length === 1 ? '' : 's'} to check`}

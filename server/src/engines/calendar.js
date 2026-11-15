@@ -1,10 +1,12 @@
 /**
  * Working-day calendar for one employee over a date range: weekend days come
  * from the effective-dated 'attendance.calendar' setting, holidays from the
- * employee's holiday calendar (or the tenant default).
+ * employee's holiday calendar (or the tenant default). The employee's rota
+ * (services/rota.js) overrides the weekly pattern day by day.
  */
 import { resolveRequired } from '../config/resolver.js';
 import { eachDay, weekday } from '../lib/dates.js';
+import { rotaFor } from '../services/rota.js';
 
 export async function buildCalendar(ctx, employee, start, end) {
   const { rows: holidays } = await ctx.db.query(
@@ -15,11 +17,15 @@ export async function buildCalendar(ctx, employee, start, end) {
     [ctx.tenant.id, start, end, employee?.holiday_calendar_id ?? null]);
   const holidayByDate = new Map(holidays.map((h) => [h.date, h.name]));
 
+  // The rota wins over the weekly pattern: "Off" makes a rest day, a shift makes a working day.
+  const rota = await rotaFor(ctx.db, ctx.tenant.id, employee?.id, start, end);
   const days = new Map();
   for (const date of eachDay(start, end)) {
     const { value, versionIds } = await resolveRequired(ctx.db, { tenantId: ctx.tenant.id, key: 'attendance.calendar', employee, date });
+    const r = rota.get(date);
     days.set(date, {
-      weekend: value.weekendDays.includes(weekday(date)),
+      weekend: r ? r.is_off : value.weekendDays.includes(weekday(date)),
+      rotaOff: !!r?.is_off,
       holiday: holidayByDate.get(date) ?? null,
       weekStartsOn: value.weekStartsOn,
       versionIds,

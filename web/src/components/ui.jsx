@@ -41,6 +41,9 @@ const ICONS = {
   tasks: 'M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11',
   paperclip: 'M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48',
   link: 'M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71',
+  edit: 'M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z',
+  chat: 'M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2zM8 9h8M8 13h5',
+  trash: 'M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6M10 11v6M14 11v6',
 };
 
 export function Icon({ name, size = 18, title }) {
@@ -68,7 +71,7 @@ export const Card = ({ title, actions, children, className = '', ...rest }) => (
 
 export const Stat = ({ label, value, sub, icon }) => (
   <div className="stat">
-    <div className="label">{icon}{label}</div>
+    <div className="label">{icon && <span className="stat-icon" aria-hidden="true">{typeof icon === 'string' ? <Icon name={icon} /> : icon}</span>}{label}</div>
     <div className="value">{typeof value === 'number' ? <CountUp value={value} /> : value}</div>
     {sub && <div className="sub">{sub}</div>}
   </div>

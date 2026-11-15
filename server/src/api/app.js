@@ -25,6 +25,9 @@ import payrollRoutes from './routes/payroll.js';
 import billingRoutes from './routes/billing.js';
 import companyRoutes from './routes/company.js';
 import taskRoutes from './routes/tasks.js';
+import rotaRoutes from './routes/rota.js';
+import helpdeskRoutes from './routes/helpdesk.js';
+import assignedTaskRoutes from './routes/assignedTasks.js';
 import { logoOf } from '../services/company.js';
 import { accessState } from '../services/billing.js';
 import { logTransport } from '../services/notifications.js';
@@ -163,6 +166,9 @@ export function buildApp({ db, clock = systemClock(), jwtSecret = process.env.JW
   app.register(billingRoutes, { prefix: '/api/billing' });
   app.register(companyRoutes, { prefix: '/api/company' });
   app.register(taskRoutes, { prefix: '/api/tasks' });
+  app.register(rotaRoutes, { prefix: '/api/rota' });
+  app.register(helpdeskRoutes, { prefix: '/api/helpdesk' });
+  app.register(assignedTaskRoutes, { prefix: '/api/assigned-tasks' });
   return app;
 }
 

@@ -215,3 +215,75 @@ export async function updateEmployee(ctx, id, input) {
     return row;
   });
 }
+
+/** Records that make up an employee's history: someone with any of these is set to Exited instead of deleted. */
+const HISTORY = [
+  ['attendance_events', 'attendance records'], ['attendance_corrections', 'attendance corrections'], ['leave_requests', 'leave requests'],
+  ['wfh_requests', 'work-from-home requests'], ['payroll_items', 'payroll entries'], ['payslips', 'payslips'], ['loans', 'loans'],
+  ['overtime_claims', 'overtime claims'], ['work_logs', 'daily task logs'], ['support_tickets', 'help desk requests'], ['assigned_tasks', 'assigned tasks'],
+];
+
+/**
+ * Deletes an employee added by mistake (a duplicate, a wrong import row), with their login.
+ * Refused when they have history (attendance, requests, payroll...) or people report to them:
+ * those must be kept, so HR sets the status to Exited instead (keeps the records, stops the sign-in).
+ * Their own set-up rows (salary structure, bank details, devices, WFH overrides, automatic leave
+ * balances) are deleted with them; anything else that names their login keeps the row without the name.
+ */
+export async function deleteEmployee(ctx, id) {
+  requireHr(ctx);
+  const emp = await getEmployee(ctx, id);
+  if (emp.user_id && emp.user_id === ctx.actor?.userId) throw conflict('delete_self', "You can't delete yourself.");
+  const found = [];
+  for (const [table, label] of HISTORY) {
+    const { n } = await ctx.db.one(`select count(*)::int as n from ${table} where tenant_id = $1 and employee_id = $2`, [ctx.tenant.id, id]);
+    if (n) found.push(`${n} ${label}`);
+  }
+  if (found.length) {
+    throw conflict('employee_has_history', `${emp.full_name} has ${found.join(', ')}, so they can't be deleted (payroll and reports need them). ` +
+      'Set their status to Exited instead: their records are kept and they can no longer sign in.', { details: { history: found } });
+  }
+  const { n: reports } = await ctx.db.one('select count(*)::int as n from employees where tenant_id = $1 and manager_id = $2', [ctx.tenant.id, id]);
+  if (reports) throw conflict('employee_is_manager', `${reports} ${reports === 1 ? 'person reports' : 'people report'} to ${emp.full_name}. Give them another manager first.`);
+
+  const firebaseUid = await ctx.db.tx(async (db) => {
+    await db.query(`select set_config('hrm.deleting_employee', $1, true)`, [id]);
+    await db.query(`delete from salary_structure_lines where tenant_id = $1 and structure_id in (select id from salary_structures where tenant_id = $1 and employee_id = $2)`, [ctx.tenant.id, id]);
+    for (const table of ['salary_structures', 'employee_payment_details', 'employee_devices', 'wfh_overrides', 'leave_ledger', 'rota_entries']) {
+      await db.query(`delete from ${table} where tenant_id = $1 and employee_id = $2`, [ctx.tenant.id, id]);
+    }
+    await db.query('update approval_tasks set approver_employee_id = null where tenant_id = $1 and approver_employee_id = $2', [ctx.tenant.id, id]);
+    await db.query('delete from employees where tenant_id = $1 and id = $2', [ctx.tenant.id, id]);
+    let uid = null;
+    if (emp.user_id) {
+      const user = await db.one('select firebase_uid from users where id = $1 and tenant_id = $2', [emp.user_id, ctx.tenant.id]);
+      uid = user?.firebase_uid ?? null;
+      // Rows that only name them ("created by", "decided by") are kept without the name.
+      const { rows: refs } = await db.query(
+        `select c.conrelid::regclass::text as tbl, a.attname as col from pg_constraint c
+           join pg_attribute a on a.attrelid = c.conrelid and a.attnum = c.conkey[1]
+          where c.contype = 'f' and c.confrelid = 'users'::regclass and array_length(c.conkey, 1) = 1 and not a.attnotnull`);
+      for (const r of refs) {
+        if (r.tbl === 'audit_log') continue; // append-only history: kept as it is (the id no longer resolves to a name)
+        await db.query(`update ${r.tbl} set ${r.col} = null where ${r.col} = $1`, [emp.user_id]);
+      }
+      for (const table of ['notifications', 'consents', 'password_resets', 'login_challenges']) {
+        await db.query(`delete from ${table} where user_id = $1`, [emp.user_id]);
+      }
+      if (await db.one('select 1 from audit_log where actor_user_id = $1 limit 1', [emp.user_id])) {
+        // The audit log names this login and can't be rewritten: retire the login instead of deleting it.
+        // It can never sign in again, and its email is freed for someone else.
+        await db.query(`update users set is_active = false, email = $2, password_hash = null, firebase_uid = null,
+                               password_changed_at = now(), session_version = session_version + 1 where id = $1`,
+          [emp.user_id, `deleted-${emp.user_id}@deleted.invalid`]);
+      } else {
+        await db.query('delete from users where id = $1 and tenant_id = $2', [emp.user_id, ctx.tenant.id]);
+      }
+    }
+    await audit(db, ctx, { action: 'employee.deleted', entityType: 'employee', entityId: id,
+      oldValue: { employee_code: emp.employee_code, full_name: emp.full_name, email: emp.email, had_login: !!emp.user_id } });
+    return uid;
+  });
+  if (firebaseUid) await identity().removeAccount(firebaseUid);
+  return { deleted: true, name: emp.full_name };
+}

@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { get, patch, post } from '../lib/api.js';
+import { api, download, get, patch, post } from '../lib/api.js';
 import { useApp } from '../lib/app.jsx';
 import { fmtDate } from '../lib/format.js';
 import { useConfirm } from '../components/confirm.jsx';
 import { PageHead } from '../components/Layout.jsx';
+import EmployeeImport from '../components/EmployeeImport.jsx';
 import { Button, Card, ErrorBox, Input, Loading, Modal, PasswordInput, StatusBadge, Switch, useLoad } from '../components/ui.jsx';
 
 /** Modules HR can switch off for one person (matches PERSONAL_MODULES on the server). */
@@ -68,6 +69,24 @@ function EmployeeForm({ item, refs, onClose, onSaved }) {
       toast('Saved.'); onSaved();
     } catch (err) { setError(err); }
   };
+  /** Delete someone added by mistake; someone with history is offered "Exited" instead (the server decides). */
+  const remove = async () => {
+    setError(null);
+    if (!(await confirm({ title: `Delete ${item.full_name}?`, danger: true, confirmLabel: 'Yes, delete', cancelLabel: 'No, keep',
+      message: 'For someone added by mistake (a duplicate or a wrong import row). They and their login are removed for good. ' +
+        'Someone who already has attendance, requests or payroll can\'t be deleted: you\'ll be offered "Exited" instead.' }))) return;
+    try {
+      await api(`/employees/${item.id}`, { method: 'DELETE' });
+      toast(`${item.full_name} deleted.`); onSaved();
+    } catch (err) {
+      if (err.code !== 'employee_has_history') { setError(err); return; }
+      if (!(await confirm({ title: `Mark ${item.full_name} as exited instead?`, confirmLabel: 'Mark as exited', cancelLabel: 'Cancel', message: err.message }))) return;
+      try {
+        await patch(`/employees/${item.id}`, { status: 'exited', exit_date: v.exit_date ?? new Date().toISOString().slice(0, 10) });
+        toast(`${item.full_name} marked as exited.`); onSaved();
+      } catch (e) { setError(e); }
+    }
+  };
   const select = (k, label, list, labelKey = 'name') => (
     <Input as="select" label={label} value={v[k] ?? ''} onChange={set(k)}>
       <option value="">—</option>{list.filter((x) => x.is_active !== false || x.id === v[k]).map((x) => <option key={x.id} value={x.id}>{x[labelKey]}</option>)}
@@ -76,7 +95,9 @@ function EmployeeForm({ item, refs, onClose, onSaved }) {
   const custom = refs.customFields.filter((f) => f.entity === 'employee' && f.is_active);
   return (
     <Modal wide title={item ? `Edit ${item.full_name}` : 'Add employee'} onClose={onClose}
-      footer={<><Button onClick={onClose}>Cancel</Button><Button kind="primary" onClick={save}>Save</Button></>}>
+      footer={<>
+        {item && item.id !== session.user.employeeId && <Button kind="danger" icon="trash" onClick={remove} style={{ marginInlineEnd: 'auto' }}>Delete</Button>}
+        <Button onClick={onClose}>Cancel</Button><Button kind="primary" onClick={save}>Save</Button></>}>
       <div className="stack">
         <div className="form-grid">
           <Input label="Employee code" value={v.employee_code ?? ''} onChange={set('employee_code')} required={!!item}
@@ -122,7 +143,9 @@ export default function Employees() {
   const [showInactive, setShowInactive] = useState(false);
   const [search, setSearch] = useState('');
   const { data, error, loading, reload } = useLoad(() => get(`/employees?status=${showInactive ? 'all' : 'active'}`), [showInactive]);
-  const { data: refs } = useLoad(async () => {
+  const { toast } = useApp();
+  const [importing, setImporting] = useState(false);
+  const { data: refs, reload: reloadRefs } = useLoad(async () => {
     const [departments, roles, employmentTypes, shifts, locations, customFields, employees] = await Promise.all(
       ['departments', 'roles', 'employment-types', 'shifts', 'locations', 'custom-fields'].map((e) => get(`/lookups/${e}`)).concat(get('/employees')));
     return { departments, roles, employmentTypes, shifts, locations, customFields, employees };
@@ -131,7 +154,14 @@ export default function Employees() {
   const rows = (data ?? []).filter((e) => `${e.full_name} ${e.employee_code} ${e.department_name}`.toLowerCase().includes(search.toLowerCase()));
   return (
     <div className="stack lg">
-      <PageHead title="Employees" subtitle={data ? `${data.length} shown` : ''} actions={<Button kind="primary" icon="plus" disabled={!refs} onClick={() => setEditing({})}>Add employee</Button>} />
+      <PageHead title="Employees" subtitle={data ? `${data.length} shown` : ''} actions={<>
+        <Button icon="download" title={showInactive ? 'Everyone, including inactive and exited' : 'Active employees (turn on "Show inactive" for everyone)'}
+          onClick={() => download(`/employees/export.csv${showInactive ? '?status=all' : ''}`, `employees-${new Date().toISOString().slice(0, 10)}.csv`)
+            .catch((e) => toast(e.message, 'bad'))}>Export CSV</Button>
+        <Button icon="file" onClick={() => setImporting(true)}>Import from CSV</Button>
+        <Button kind="primary" icon="plus" disabled={!refs} onClick={() => setEditing({})}>Add employee</Button></>} />
+      {importing && <EmployeeImport onClose={() => setImporting(false)}
+        onDone={(r) => { setImporting(false); reload(); reloadRefs(); toast(`Import done: ${r.added} added, ${r.updated} updated${r.failed ? `, ${r.failed} skipped` : ''}.`); }} />}
       <div className="row">
         <Input placeholder="Search name, code or department" aria-label="Search" value={search} onChange={(e) => setSearch(e.target.value)} />
         <Switch label="Show inactive" checked={showInactive} onChange={setShowInactive} />
