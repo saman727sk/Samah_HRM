@@ -115,6 +115,23 @@ export default async function authRoutes(app) {
     return resendCode({ db: app.db, clock: app.clock, mailer: app.mailer, exposeCode: exposeCode() }, req.body?.challenge);
   });
 
+  /** Change my own password: the current one is checked; other sessions end, this one gets a new token. */
+  app.post('/me/password', async (req) => {
+    if (identity().name === 'firebase') throw new AppError(400, 'use_firebase', 'Use "Forgot password" on the sign-in page to change your password.');
+    loginLimit(`pw|${req.ctx.actor.userId}`);
+    const { currentPassword, newPassword } = req.body ?? {};
+    const u = await app.db.one('select id, password_hash, session_version from users where id = $1', [req.ctx.actor.userId]);
+    if (!u?.password_hash || !currentPassword || !(await bcrypt.compare(currentPassword, u.password_hash))) {
+      throw new AppError(400, 'wrong_password', 'Your current password is not right.');
+    }
+    if (!newPassword || String(newPassword).length < 8) throw new AppError(400, 'password_invalid', 'The new password must be at least 8 characters.');
+    if (newPassword === currentPassword) throw new AppError(400, 'password_invalid', 'Choose a password different from the current one.');
+    const { passwordHash } = await identity().createAccount({ password: newPassword });
+    const next = await app.db.one(`update users set password_hash = $2, password_changed_at = now(), session_version = session_version + 1
+      where id = $1 returning session_version`, [u.id, passwordHash]);
+    return { token: signToken(app, u.id, next.session_version) };
+  });
+
   app.get('/me', async (req) => {
     const { actor, tenant } = req.ctx;
     const employee = actor.employeeId

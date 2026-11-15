@@ -11,7 +11,7 @@ import { tenantToday } from '../lib/clock.js';
 import { maxDate, minDate } from '../lib/dates.js';
 import { notFound } from '../lib/errors.js';
 import { deepEqual, diffValues, round2 } from '../lib/util.js';
-import { assertCanView, requireHr } from './access.js';
+import { assertCanView, can, requireHr } from './access.js';
 import { employeesInScope, getEmployee } from './employees.js';
 import { leaveYearConfig, syncLedger, typeBalance } from './leave.js';
 import { previewNetPay } from './payroll.js';
@@ -19,7 +19,11 @@ import { quotaFor } from './wfh.js';
 
 export const definitions = () => listDefinitions();
 
-export async function list(ctx, filters) { requireHr(ctx); return store.listSettings(ctx, filters); }
+export async function list(ctx, filters) {
+  // Payroll staff read the payroll settings (salary components) on the Salaries page.
+  if (!(String(filters?.key ?? '').startsWith('payroll.') && can(ctx, 'payroll'))) requireHr(ctx);
+  return store.listSettings(ctx, filters);
+}
 export async function history(ctx, settingId) { requireHr(ctx); return store.history(ctx, settingId); }
 export async function getVersion(ctx, id) { requireHr(ctx); return store.getVersion(ctx, id); }
 export async function createDraft(ctx, input) { requireHr(ctx); return store.createDraft(ctx, input); }

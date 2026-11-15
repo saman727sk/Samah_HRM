@@ -21,7 +21,7 @@ async function readText(file) {
 export default function EmployeeImport({ onClose, onDone }) {
   const { toast } = useApp();
   const [file, setFile] = useState(null); // { name, csv }
-  const [opts, setOpts] = useState({ createMissing: true, loginsForAll: false, sendInvites: true });
+  const [opts, setOpts] = useState({ createMissing: true, loginsForAll: false, sendInvites: false });
   const [preview, setPreview] = useState(null);
   const [result, setResult] = useState(null);
   const [err, setErr] = useState(null);
@@ -89,6 +89,7 @@ export default function EmployeeImport({ onClose, onDone }) {
             <Switch label="Add departments, roles and employment types that don't exist yet" checked={opts.createMissing} onChange={(v) => setOpts({ ...opts, createMissing: v })} />
             <Switch label='Create a login for everyone with an email (otherwise only rows with Login = "yes")' checked={opts.loginsForAll} onChange={(v) => setOpts({ ...opts, loginsForAll: v })} />
             <Switch label="Email new logins a link to choose their password" checked={opts.sendInvites} onChange={(v) => setOpts({ ...opts, sendInvites: v })} />
+            {!opts.sendInvites && <p className="small muted" style={{ margin: 0 }}>No emails: logins made here get a random password. Easier: import without logins, then use <strong>Give logins to everyone</strong> on People to set one starting password.</p>}
           </div>
           <p className="small muted" style={{ margin: 0 }}>
             A row whose employee code already exists updates that person (only the cells that are filled in). Rows without a code get the next free one.

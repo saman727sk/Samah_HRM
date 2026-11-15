@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useRef, useState } from 'react';
+import { ChangePasswordDialog } from './LoginDialogs.jsx';
 import { get, post } from '../lib/api.js';
 import { navigate, useApp } from '../lib/app.jsx';
 import { fmtDate, fmtMoney } from '../lib/format.js';
@@ -15,7 +16,7 @@ function NavLink({ to, icon, label, active, count, onClick }) {
 }
 
 function Notifications() {
-  const { t } = useApp();
+  const { t, reloadSession } = useApp();
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState([]);
   const ref = useRef(null);
@@ -35,6 +36,7 @@ function Notifications() {
     else if (n.event === 'task_blocked') navigate('/tasks?view=log&scope=team');
     else if (n.event.startsWith('task_')) navigate(n.payload?.taskId ? `/tasks?task=${n.payload.taskId}` : '/tasks');
     else if (n.event === 'tasks_today') navigate('/tasks');
+    else if (n.event === 'access_changed') { await reloadSession?.(); navigate('/'); } // new rights: refresh the menu
     else if (n.event.startsWith('billing_')) navigate('/billing');
     else if (n.payload?.requestType) navigate(n.event === 'approval_needed' || n.event === 'request_escalated' ? '/approvals' : '/requests');
     setOpen(false);
@@ -78,7 +80,8 @@ const settingsLinks = (t) => [
 const isActive = (to, current, exact) => (to === '#/' || exact ? current === (to.slice(1) || '/') : current.startsWith(to.slice(1)));
 
 export default function Layout({ route, children }) {
-  const { session, logout, t, locale, setLocale, theme, setTheme, isHr, isManager, level } = useApp();
+  const { session, logout, t, locale, setLocale, theme, setTheme, isHr, isManager, level, can, provider } = useApp();
+  const [pwOpen, setPwOpen] = useState(false);
   const confirm = useConfirm();
   const signOut = async () => {
     if (await confirm({ title: t('ui.sign_out_q', 'Sign out?'), message: t('ui.sign_out_msg', 'You will need your email and password to sign in again.'),
@@ -86,15 +89,17 @@ export default function Layout({ route, children }) {
   };
   const [menu, setMenu] = useState(false);
   const [pending, setPending] = useState(0);
+  const approver = isManager && can('team.approve');
   useEffect(() => {
-    if (!isManager) return;
+    if (!approver) return;
     get('/approvals').then((x) => setPending(x.length)).catch(() => {});
-  }, [isManager, route.path]);
-  const [helpOpen, setHelpOpen] = useState(0); // help desk requests waiting for HR
+  }, [approver, route.path]);
+  const [helpOpen, setHelpOpen] = useState(0); // help desk requests waiting for HR / help desk staff
+  const helpStaff = can('helpdesk');
   useEffect(() => {
-    if (!isHr || session.subscription?.blocked) return;
+    if (!helpStaff || session.subscription?.blocked) return;
     get('/helpdesk/open-count').then((x) => setHelpOpen(x.open)).catch(() => {});
-  }, [isHr, route.path, session.subscription?.blocked]);
+  }, [helpStaff, route.path, session.subscription?.blocked]);
   const has = (m) => !!session.modules?.includes(m);
   const [tasksDue, setTasksDue] = useState(0); // my assigned tasks due today or overdue
   const tasksOn = has('tasks') && !session.subscription?.blocked && !!session.employee;
@@ -133,13 +138,18 @@ export default function Layout({ route, children }) {
         ['#/helpdesk', 'chat', t('nav.helpdesk', 'Help desk'), helpOpen],
       ]],
       ...(isManager ? [[t('nav.team_section', 'Team'), [
-        ['#/team', 'users', t('nav.team', 'Team')],
-        ['#/approvals', 'inbox', t('nav.approvals', 'Approvals'), pending],
-        ...(has('attendance') ? [['#/rota', 'grid', t('nav.rota', 'Rota')]] : []),
+        ['#/team', 'users', t('nav.team', 'Team'), 0, true],
+        ...(can('team.approve') ? [['#/approvals', 'inbox', t('nav.approvals', 'Approvals'), pending]] : []),
+        ...(has('attendance') && can('team.rota') ? [['#/rota', 'grid', t('nav.rota', 'Rota')]] : []),
+        ...(can('team.access') ? [['#/team/features', 'check', t('nav.team_features', 'Team features')]] : []),
       ]]] : []),
+      // Payroll staff who are not HR (HR sees these links in its own section).
+      ...(!isHr && payrollOn && can('payroll') ? [[t('nav.payroll_section', 'Payroll'), [
+        ['#/payroll', 'money', t('nav.payroll', 'Payroll')], ['#/salaries', 'list', t('nav.salaries', 'Salaries & loans')]]]] : []),
       ...(isHr ? [[t('nav.hr_section', 'HR'), [
         ['#/hr', 'chart', t('nav.hr_dashboard', 'HR dashboard')],
         ['#/employees', 'users', t('nav.employees', 'People')],
+        ['#/settings/access', 'shield', t('nav.teams_access', 'Teams & access')],
         ...(payrollOn ? [['#/payroll', 'money', t('nav.payroll', 'Payroll')], ['#/salaries', 'list', t('nav.salaries', 'Salaries & loans')]] : []),
       ]], [t('nav.settings_section', 'Settings'), settingsLinks(t)]] : []),
     ];
@@ -169,10 +179,12 @@ export default function Layout({ route, children }) {
         <div className="side-user">
           <span className="avatar" aria-hidden="true">{initials}</span>
           <span className="user-name" title={`${name} · ${place}`}>{name}<small>{place}</small></span>
+          {provider !== 'firebase' && <button className="icon-btn" aria-label={t('ui.change_password', 'Change password')} title={t('ui.change_password', 'Change password')} onClick={() => setPwOpen(true)}><Icon name="lock" /></button>}
           <button className="icon-btn" aria-label={t('ui.sign_out', 'Sign out')} title={t('ui.sign_out', 'Sign out')} onClick={signOut}><Icon name="logout" /></button>
         </div>
         {session.tenant && <div className="side-powered">Powered by {PRODUCT_NAME}</div>}
       </aside>
+      {pwOpen && <ChangePasswordDialog onClose={() => setPwOpen(false)} />}
       <div className={`side-backdrop ${menu ? 'open' : ''}`} onClick={close} aria-hidden="true" />
       <div className="main-col">
         <header className="topbar no-print">

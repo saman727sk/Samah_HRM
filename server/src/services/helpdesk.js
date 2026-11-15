@@ -2,7 +2,7 @@
  * Help desk: an employee asks HR something and HR answers in a thread.
  *
  *   employee  opens requests, sees and replies to their own
- *   hr_admin  sees every request, replies, closes and reopens
+ *   hr_admin  sees every request, replies, closes and reopens (so does anyone HR gave the "helpdesk" right)
  *
  * Status: open (waiting for HR) -> answered (HR replied, waiting for the employee) -> closed.
  * A reply from the employee puts it back to open, also after it was closed.
@@ -10,8 +10,12 @@
  */
 import { audit } from '../lib/audit.js';
 import { badRequest, forbidden, notFound } from '../lib/errors.js';
-import { isHr } from './access.js';
+import { can, usersWithPermission } from './access.js';
 import { hrUserIds, notify, userOfEmployee } from './notifications.js';
+
+/** HR and the people HR gave the help desk right to (e.g. a support manager) answer requests. */
+const isHr = (ctx) => can(ctx, 'helpdesk');
+const staffUserIds = async (ctx) => [...new Set([...(await hrUserIds(ctx)), ...(await usersWithPermission(ctx, 'helpdesk'))])];
 
 export const CATEGORIES = ['payroll', 'leave', 'attendance', 'it', 'documents', 'other'];
 const LABEL = { payroll: 'Salary & payslips', leave: 'Leave', attendance: 'Attendance', it: 'IT & access', documents: 'Letters & documents', other: 'Other' };
@@ -79,7 +83,7 @@ export async function openTicket(ctx, { category, subject, body } = {}) {
     return t;
   });
   const me = await ctx.db.one('select full_name from employees where id = $1', [ctx.actor.employeeId]);
-  const hr = (await hrUserIds(ctx)).filter((u) => u !== ctx.actor.userId);
+  const hr = (await staffUserIds(ctx)).filter((u) => u !== ctx.actor.userId);
   await notify(ctx, { userIds: hr, event: 'ticket_new', channels: ['in_app', 'email'],
     params: { number: ticket.number, subject: ticket.subject, name: me.full_name, category: LABEL[category], ticketId: ticket.id } });
   return getTicket(ctx, ticket.id);
@@ -104,7 +108,7 @@ export async function replyTicket(ctx, id, { body } = {}) {
     const userId = await userOfEmployee(ctx, ticket.employee_id);
     if (userId) await notify(ctx, { userIds: [userId], event: 'ticket_reply', params, channels: ['in_app', 'email'] });
   } else {
-    await notify(ctx, { userIds: (await hrUserIds(ctx)).filter((u) => u !== ctx.actor.userId), event: 'ticket_reply', params });
+    await notify(ctx, { userIds: (await staffUserIds(ctx)).filter((u) => u !== ctx.actor.userId), event: 'ticket_reply', params });
   }
   return getTicket(ctx, id);
 }

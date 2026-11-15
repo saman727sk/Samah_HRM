@@ -8,9 +8,18 @@
  */
 import { audit } from '../lib/audit.js';
 import { addDays, isYmd, monthEnd } from '../lib/dates.js';
-import { badRequest, conflict, notFound } from '../lib/errors.js';
+import { badRequest, conflict, forbidden, notFound } from '../lib/errors.js';
 import { round2 } from '../lib/util.js';
-import { requireHr } from './access.js';
+import { isHr, requirePermission } from './access.js';
+
+/** HR, or payroll staff (people HR gave the "payroll" right). */
+const requireHr = (ctx) => requirePermission(ctx, 'payroll');
+/** Payroll staff who are not HR can't change their own pay, bank details or loans. */
+function notOwnPay(ctx, employeeId) {
+  if (!isHr(ctx) && employeeId && employeeId === ctx.actor?.employeeId) {
+    throw forbidden("You can't change your own salary, bank details or loans. Ask HR.");
+  }
+}
 import { getEmployee } from './employees.js';
 import { isEnabled, requireModule } from './features.js';
 
@@ -71,6 +80,7 @@ export async function salaryOf(ctx, employeeId) {
  */
 export async function addStructure(ctx, employeeId, { effectiveFrom, lines, note = null }) {
   requireHr(ctx);
+  notOwnPay(ctx, employeeId);
   await requireModule(ctx, 'payroll');
   const employee = await getEmployee(ctx, employeeId);
   if (!isYmd(effectiveFrom)) throw badRequest('date_invalid', 'Effective date must be a date like 2026-04-01.');
@@ -124,6 +134,7 @@ export async function deleteStructure(ctx, structureId) {
   requireHr(ctx);
   const s = await ctx.db.one('select * from salary_structures where id = $1 and tenant_id = $2', [structureId, ctx.tenant.id]);
   if (!s) throw notFound('Salary revision');
+  notOwnPay(ctx, s.employee_id);
   await assertAfterFrozen(ctx, s.effective_from, 'This revision is used by a paid payroll, so it');
   const later = await ctx.db.one('select 1 from salary_structures where employee_id = $1 and effective_from > $2', [s.employee_id, s.effective_from]);
   if (later) throw conflict('not_latest', 'Only the latest salary revision can be removed.');
@@ -155,6 +166,7 @@ export async function paymentDetails(ctx, employeeId) {
 
 export async function setPaymentDetails(ctx, employeeId, { bankName, accountTitle, iban }) {
   requireHr(ctx);
+  notOwnPay(ctx, employeeId);
   const employee = await getEmployee(ctx, employeeId);
   const clean = iban ? String(iban).replace(/\s+/g, '').toUpperCase() : null;
   if (clean && !isValidIban(clean)) throw badRequest('iban_invalid', 'This IBAN is not valid. Check it for typos (Pakistani IBANs look like PK36SCBL0000001123456702).');
@@ -190,6 +202,7 @@ export async function listLoans(ctx, { employeeId, status } = {}) {
 
 export async function createLoan(ctx, { employeeId, kind = 'loan', principal, installmentAmount, startPeriod, note = null }) {
   requireHr(ctx);
+  notOwnPay(ctx, employeeId);
   await requireModule(ctx, 'loans');
   const employee = await getEmployee(ctx, employeeId);
   const errors = [];
@@ -233,6 +246,7 @@ async function loadLoan(ctx, id) {
 export async function cancelLoan(ctx, id, { reason = null } = {}) {
   requireHr(ctx);
   const loan = await loadLoan(ctx, id);
+  notOwnPay(ctx, loan.employee_id);
   if (loan.status !== 'active') throw conflict('loan_not_active', 'Only an active loan can be cancelled.');
   const until = await frozenUntil(ctx);
   await ctx.db.tx(async (db) => {
@@ -248,6 +262,7 @@ export async function skipInstallment(ctx, installmentId) {
   requireHr(ctx);
   const inst = await ctx.db.one('select * from loan_installments where id = $1 and tenant_id = $2', [installmentId, ctx.tenant.id]);
   if (!inst) throw notFound('Installment');
+  notOwnPay(ctx, (await ctx.db.one('select employee_id from loans where id = $1', [inst.loan_id]))?.employee_id);
   if (inst.status !== 'scheduled') throw conflict('installment_not_scheduled', 'Only an upcoming installment can be skipped.');
   await assertAfterFrozen(ctx, `${inst.period_key}-01`, 'This installment');
   await ctx.db.tx(async (db) => {

@@ -1,9 +1,11 @@
+import { createHash, randomBytes } from 'node:crypto';
 import { identity } from '../auth/identity.js';
+import { PRODUCT_NAME } from '../lib/product.js';
 import { audit } from '../lib/audit.js';
 import { isYmd } from '../lib/dates.js';
 import { badRequest, conflict, notFound } from '../lib/errors.js';
 import { validateCustomFields } from './customFields.js';
-import { assertCanView, assertInTenant, isHr, isManager, isSystem, reportIds, requireHr } from './access.js';
+import { assertCanView, assertInTenant, can, isHr, isManager, isSystem, reportIds, requireHr } from './access.js';
 import { assertWithinLimit } from './billing.js';
 import { normalizeModuleAccess } from './features.js';
 
@@ -42,12 +44,12 @@ export async function getEmployee(ctx, id, { check = true } = {}) {
 
 export async function listEmployees(ctx, { departmentId, status = 'active' } = {}) {
   let ids = null;
-  if (!isHr(ctx) && !isSystem(ctx)) {
+  if (!isHr(ctx) && !isSystem(ctx) && !can(ctx, 'payroll')) {
     ids = [ctx.actor.employeeId].filter(Boolean);
     if (isManager(ctx) && ctx.actor.employeeId) ids.push(...(await reportIds(ctx, ctx.actor.employeeId)));
   }
   const { rows } = await ctx.db.query(
-    `select e.*, d.name as department_name, r.name as role_name, m.full_name as manager_name, u.access_level
+    `select e.*, d.name as department_name, r.name as role_name, m.full_name as manager_name, u.access_level, u.email as login_email
        from employees e
        left join users u on u.id = e.user_id and u.tenant_id = e.tenant_id
        left join departments d on d.id = e.department_id and d.tenant_id = e.tenant_id
@@ -205,6 +207,17 @@ export async function updateEmployee(ctx, id, input) {
     const row = await db.one(
       `update employees set ${cols.map((c, i) => `${c} = $${i + 3}`).join(', ')}, updated_at = now()
         where id = $1 and tenant_id = $2 returning *`, [id, ctx.tenant.id, ...cols.map((c) => data[c])]);
+    // Their email is also the one they sign in with: changing it on the record changes the login too.
+    if (row.user_id && data.email && 'email' in data) {
+      const next = data.email.trim().toLowerCase();
+      const u = await db.one('select email, firebase_uid from users where id = $1 and tenant_id = $2', [row.user_id, ctx.tenant.id]);
+      if (u && u.email.toLowerCase() !== next) {
+        await assertEmailFree(db, next, ctx.tenant.id);
+        await db.query('update users set email = $2 where id = $1', [row.user_id, next]);
+        if (u.firebase_uid) await identity().updateAccount(u.firebase_uid, { email: next });
+        await audit(db, ctx, { action: 'login.email_changed', entityType: 'employee', entityId: id, oldValue: { email: u.email }, newValue: { email: next } });
+      }
+    }
     // Deactivating / exiting an employee also disables their sign-in.
     if (row.user_id && data.status) {
       const u = await db.one('update users set is_active = $2 where id = $1 and tenant_id = $3 returning firebase_uid',
@@ -286,4 +299,99 @@ export async function deleteEmployee(ctx, id) {
   });
   if (firebaseUid) await identity().removeAccount(firebaseUid);
   return { deleted: true, name: emp.full_name };
+}
+
+const INVITE_TTL_MS = 7 * 24 * 60 * 60_000;
+
+/**
+ * Gives an existing employee (added without one, e.g. by an import) a login.
+ * input: { email? (default: their work email), accessLevel = 'employee', password?, sendInvite = false }
+ *   password    set by HR, who passes it on to the person (no email is sent)
+ *   sendInvite  instead email them a link to choose their own password (needs ctx.mailer / ctx.appUrl)
+ * Returns { userId, email, invited, inviteFailed }.
+ */
+export async function addLogin(ctx, id, { email, accessLevel = 'employee', password, sendInvite = false } = {}) {
+  requireHr(ctx);
+  const emp = await getEmployee(ctx, id);
+  if (emp.user_id) throw conflict('login_exists', `${emp.full_name} already has a login.`);
+  if (emp.status !== 'active') throw conflict('not_active', `${emp.full_name} is not active, so they can't get a login.`);
+  const address = String(email ?? emp.email ?? '').trim().toLowerCase();
+  if (!address) throw badRequest('login_invalid', `${emp.full_name} has no email. Enter the email they will sign in with.`);
+  if (!sendInvite && !password) throw badRequest('login_invalid', 'Set a password for them (at least 8 characters).');
+  if (password && String(password).length < 8) throw badRequest('login_invalid', 'The password must be at least 8 characters.');
+  const createdUids = [];
+  let token = null;
+  const userId = await ctx.db.tx(async (db) => {
+    const u = await createLogin(db, ctx, { email: address, password: password || randomBytes(18).toString('base64url'), accessLevel }, emp.full_name, createdUids);
+    await db.query('update employees set user_id = $2, email = coalesce(email, $3), updated_at = now() where id = $1 and tenant_id = $4',
+      [id, u.id, address, ctx.tenant.id]);
+    const { password_hash } = await db.one('select password_hash from users where id = $1', [u.id]);
+    if (password_hash && sendInvite) {
+      token = randomBytes(32).toString('base64url');
+      await db.query('insert into password_resets (user_id, token_hash, expires_at) values ($1, $2, $3)',
+        [u.id, createHash('sha256').update(token).digest('hex'), new Date(ctx.clock.now().getTime() + INVITE_TTL_MS)]);
+    }
+    await audit(db, ctx, { action: 'employee.login_added', entityType: 'employee', entityId: id, meta: { email: address, accessLevel, invite: !!sendInvite } });
+    return u.id;
+  }).catch(async (err) => {
+    for (const uid of createdUids) await identity().removeAccount(uid);
+    throw err;
+  });
+  let invited = false;
+  let inviteFailed = false;
+  if (token && ctx.mailer) {
+    try {
+      await ctx.mailer.send({ to: address, subject: `Your ${PRODUCT_NAME} account at ${ctx.tenant.name}`,
+        text: `Hello ${emp.full_name},\n\n${ctx.tenant.name} has given you a ${PRODUCT_NAME} login, where you check in, apply for leave, see your tasks and payslips.\n\n` +
+          `Open this link to choose your password:\n\n${ctx.appUrl}/#/reset?token=${token}\n\n` +
+          `The link works once and expires in 7 days. After that, use "Forgot password" on the sign-in page with ${address}.\n\n${PRODUCT_NAME}` });
+      invited = true;
+    } catch { inviteFailed = true; }
+  }
+  return { userId, email: address, invited, inviteFailed };
+}
+
+/**
+ * Gives every active employee without a login an Employee-level login (only their own data) and
+ * emails each a link to choose their password. People without an email are listed, not changed.
+ * Returns { created, invited, inviteFailed, noEmail: [names], failed: [{ name, reason }] }.
+ */
+export async function addMissingLogins(ctx, { password, sendInvite = false } = {}) {
+  requireHr(ctx);
+  if (!sendInvite && (!password || String(password).length < 8)) {
+    throw badRequest('login_invalid', 'Set a starting password for everyone (at least 8 characters). Each person can change it after signing in.');
+  }
+  const { rows } = await ctx.db.query(
+    `select id, full_name, email from employees where tenant_id = $1 and status = 'active' and user_id is null order by full_name`, [ctx.tenant.id]);
+  const out = { created: 0, invited: 0, inviteFailed: 0, noEmail: [], failed: [] };
+  for (const e of rows) {
+    if (!e.email?.trim()) { out.noEmail.push(e.full_name); continue; }
+    try {
+      const r = await addLogin(ctx, e.id, { email: e.email, accessLevel: 'employee', password, sendInvite });
+      out.created += 1;
+      if (r.invited) out.invited += 1;
+      if (r.inviteFailed) out.inviteFailed += 1;
+    } catch (err) {
+      out.failed.push({ name: e.full_name, reason: err.message });
+    }
+  }
+  return out;
+}
+
+/** HR sets a new password for someone's login (e.g. they forgot it). Their open sessions end. */
+export async function setLoginPassword(ctx, id, { password } = {}) {
+  requireHr(ctx);
+  const emp = await getEmployee(ctx, id);
+  if (!emp.user_id) throw conflict('no_login', `${emp.full_name} has no login yet. Create one first.`);
+  if (emp.user_id === ctx.actor?.userId) throw badRequest('own_password', 'Change your own password from the menu under your name.');
+  if (!password || String(password).length < 8) throw badRequest('login_invalid', 'The password must be at least 8 characters.');
+  await ctx.db.tx(async (db) => {
+    const u = await db.one('select id, firebase_uid from users where id = $1 and tenant_id = $2', [emp.user_id, ctx.tenant.id]);
+    const account = u.firebase_uid ? { passwordHash: null } : await identity().createAccount({ password });
+    await db.query(`update users set password_hash = coalesce($2, password_hash), password_changed_at = now(),
+                           session_version = session_version + 1 where id = $1`, [u.id, account.passwordHash]);
+    if (u.firebase_uid) await identity().updateAccount(u.firebase_uid, { password });
+    await audit(db, ctx, { action: 'employee.password_set', entityType: 'employee', entityId: id });
+  });
+  return { ok: true };
 }

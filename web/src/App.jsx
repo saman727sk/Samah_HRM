@@ -14,6 +14,8 @@ import Attendance from './pages/Attendance.jsx';
 import Requests from './pages/Requests.jsx';
 import Tasks from './pages/Tasks.jsx';
 import Team from './pages/Team.jsx';
+import TeamFeatures from './pages/TeamFeatures.jsx';
+import TeamsAccess from './pages/settings/TeamsAccess.jsx';
 import Approvals from './pages/Approvals.jsx';
 import HrDashboard from './pages/HrDashboard.jsx';
 import Employees from './pages/Employees.jsx';
@@ -36,9 +38,10 @@ import HelpDesk from './pages/HelpDesk.jsx';
 
 const ROUTES = [
   ['/', MyDashboard], ['/attendance', Attendance], ['/requests', Requests], ['/tasks', Tasks],
-  ['/team', Team, 'manager'], ['/approvals', Approvals, 'manager'], ['/rota', Rota, 'manager'], ['/helpdesk', HelpDesk],
+  ['/team', Team, 'manager'], ['/approvals', Approvals, 'perm:team.approve'], ['/rota', Rota, 'perm:team.rota'],
+  ['/team/features', TeamFeatures, 'perm:team.access'], ['/settings/access', TeamsAccess, 'hr'], ['/helpdesk', HelpDesk],
   ['/payslips', Payslips],
-  ['/hr', HrDashboard, 'hr'], ['/employees', Employees, 'hr'], ['/payroll', Payroll, 'hr'], ['/salaries', Salaries, 'hr'],
+  ['/hr', HrDashboard, 'hr'], ['/employees', Employees, 'hr'], ['/payroll', Payroll, 'perm:payroll'], ['/salaries', Salaries, 'perm:payroll'],
   ['/settings/policies', Policies, 'hr'], ['/settings/lists', Lists, 'hr'], ['/settings/features', Features, 'hr'],
   ['/settings/transfer', Transfer, 'hr'], ['/settings/audit', Audit, 'hr'], ['/settings/company', CompanyProfile, 'hr'],
   ['/billing', Subscription, 'hr'],
@@ -58,7 +61,7 @@ function Paused({ status }) {
 }
 
 function Routed() {
-  const { session, booting, isHr, isManager, level } = useApp();
+  const { session, booting, isHr, isManager, level, can } = useApp();
   const route = useRoute();
   useEffect(() => { if (session) track('page_view', { page_path: route.path, page_title: route.path }); }, [route.path, session]);
   if (booting) return <Loading />;
@@ -71,7 +74,8 @@ function Routed() {
   }
   const home = level === 'super_admin' ? AdminDashboard : MyDashboard;
   const match = ROUTES.find(([p]) => p === route.path);
-  const allowed = !match?.[2] || (match[2] === 'hr' && isHr) || (match[2] === 'manager' && isManager) || (match[2] === 'super' && level === 'super_admin');
+  const allowed = !match?.[2] || (match[2] === 'hr' && isHr) || (match[2] === 'manager' && isManager) || (match[2] === 'super' && level === 'super_admin')
+    || (match[2].startsWith('perm:') && (match[2].startsWith('perm:team.') ? isManager : true) && can(match[2].slice(5)));
   const sub = session.subscription;
   // The server refuses everything but billing while blocked; show why instead of failing pages.
   const Page = sub?.blocked ? (isHr ? Subscription : null)

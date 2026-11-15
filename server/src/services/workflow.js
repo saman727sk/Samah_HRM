@@ -17,7 +17,7 @@ import { resolveRequired } from '../config/resolver.js';
 import { audit } from '../lib/audit.js';
 import { tenantToday } from '../lib/clock.js';
 import { badRequest, conflict, forbidden, notFound } from '../lib/errors.js';
-import { isHr } from './access.js';
+import { effectivePermissions, isHr, requirePermission } from './access.js';
 import { getEmployee } from './employees.js';
 import { hrUserIds, notify, userOfEmployee } from './notifications.js';
 
@@ -40,13 +40,19 @@ export async function resolveWorkflow(ctx, type, employee) {
 /** Turns configured steps into concrete approvers, skipping missing/self/duplicate ones. */
 async function buildChain(ctx, employee, steps) {
   const managerOf = async (id) => (id ? (await ctx.db.one('select manager_id from employees where id = $1', [id]))?.manager_id : null);
+  // A manager HR took the "approve requests" right from is skipped (the next step, or HR, decides).
+  const mayApprove = async (id) => {
+    const r = await ctx.db.one(`select u.access_level, e.permissions from employees e left join users u on u.id = e.user_id
+      where e.id = $1 and e.tenant_id = $2 and e.status = 'active'`, [id, ctx.tenant.id]);
+    return !!r?.access_level && effectivePermissions(r.access_level, r.permissions).includes('team.approve');
+  };
   const chain = [];
   const seen = new Set();
   for (const step of steps) {
     let approver = null;
     if (step.approver === 'manager') approver = employee.manager_id;
     if (step.approver === 'skip_level_manager') approver = await managerOf(employee.manager_id);
-    if (step.approver !== 'hr' && (!approver || approver === employee.id)) continue;
+    if (step.approver !== 'hr' && (!approver || approver === employee.id || !(await mayApprove(approver)))) continue;
     const key = step.approver === 'hr' ? 'hr' : approver;
     if (seen.has(key)) continue;
     seen.add(key);
@@ -124,6 +130,7 @@ export async function submit(ctx, type, requestId, { autoApprove = false } = {})
 async function canAct(ctx, task, req) {
   const assigned = task.approver_kind === 'hr' ? isHr(ctx) : task.approver_employee_id === ctx.actor?.employeeId;
   if (!assigned && !isHr(ctx)) throw forbidden("You can't decide this request.");
+  if (task.approver_kind !== 'hr') requirePermission(ctx, 'team.approve');
   if (ctx.actor?.employeeId === req.employeeId) {
     if (!isHr(ctx)) throw forbidden("You can't approve your own request.");
     const otherHr = (await hrUserIds(ctx)).filter((id) => id !== ctx.actor.userId);

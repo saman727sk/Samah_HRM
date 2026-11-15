@@ -15,7 +15,8 @@ const when = (iso) => {
 
 /** Help desk: employees ask HR; HR sees everyone's requests and answers them. ?id= opens one. */
 export default function HelpDesk({ query = {} }) {
-  const { isHr, toast } = useApp();
+  const { can, toast } = useApp();
+  const isHr = can('helpdesk'); // HR, or help desk staff
   const [filter, setFilter] = useState(isHr ? 'open' : '');
   const [q, setQ] = useState('');
   const [creating, setCreating] = useState(false);
@@ -74,7 +75,8 @@ export default function HelpDesk({ query = {} }) {
 }
 
 function Thread({ id, onChanged }) {
-  const { isHr, session, toast } = useApp();
+  const { can, session, toast } = useApp();
+  const isHr = can('helpdesk');
   const { data: tk, loading, error, reload } = useLoad(() => get(`/helpdesk/${id}`), [id]);
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);

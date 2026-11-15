@@ -86,3 +86,10 @@ export async function setFlag(ctx, moduleKey, { enabled, config }) {
   await audit(ctx.db, ctx, { action: 'feature_flag.set', entityType: 'feature_flag', entityId: moduleKey, oldValue: before, newValue: row });
   return row;
 }
+
+/** Modules switched on and in the plan for the company, whoever is asking (for HR / manager pickers). */
+export async function companyModules(ctx) {
+  return (await ctx.db.query(
+    `select f.module_key from feature_flags f left join subscriptions s on s.tenant_id = f.tenant_id
+      where f.tenant_id = $1 and f.enabled and ${INCLUDED} order by f.module_key`, [ctx.tenant.id])).rows.map((r) => r.module_key);
+}

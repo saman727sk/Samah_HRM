@@ -6,6 +6,7 @@ import { useConfirm } from '../components/confirm.jsx';
 import { PageHead } from '../components/Layout.jsx';
 import EmployeeImport from '../components/EmployeeImport.jsx';
 import { Button, Card, ErrorBox, Input, Loading, Modal, PasswordInput, StatusBadge, Switch, useLoad } from '../components/ui.jsx';
+import { BulkLoginsDialog } from '../components/LoginDialogs.jsx';
 
 /** Modules HR can switch off for one person (matches PERSONAL_MODULES on the server). */
 const PERSONAL_MODULES = [
@@ -48,7 +49,8 @@ function EmployeeForm({ item, refs, onClose, onSaved }) {
   const { toast, session } = useApp();
   const confirm = useConfirm();
   const [v, setV] = useState(item ?? { status: 'active', custom_fields: {}, module_access: null });
-  const [login, setLogin] = useState(item ? null : { email: '', password: '', accessLevel: 'employee' });
+  const [login, setLogin] = useState(item ? null : { enabled: true, accessLevel: 'employee', password: '' });
+  const [acct, setAcct] = useState({ accessLevel: 'employee', password: '' }); // editing: create a login / set a new password
   const [error, setError] = useState(null);
   const set = (k) => (e) => setV({ ...v, [k]: e.target.value || null });
   // New employee: pre-fill the next code (editable; left empty, the server generates it).
@@ -63,11 +65,42 @@ function EmployeeForm({ item, refs, onClose, onSaved }) {
     const keys = ['employee_code', 'full_name', 'email', 'phone', 'department_id', 'role_id', 'employment_type_id', 'manager_id', 'shift_id', 'location_id',
       'joining_date', 'probation_end_date', 'exit_date', 'status', 'custom_fields', 'module_access'];
     const body = Object.fromEntries(keys.filter((k) => v[k] !== undefined).map((k) => [k, v[k]]));
+    if (!item && login?.enabled && !v.email?.trim()) {
+      setError(new Error('Enter their email (they sign in with it), or switch off "Give them a login".'));
+      return;
+    }
+    if (!item && login?.enabled && login.password.length < 8) {
+      setError(new Error('Set a password for their login (at least 8 characters), or switch off "Give them a login".'));
+      return;
+    }
+    if (item && acct.password && acct.password.length < 8) { setError(new Error('The password must be at least 8 characters.')); return; }
+    if (item && !item.user_id && acct.password && !v.email?.trim()) { setError(new Error('Enter their email above: they sign in with it.')); return; }
+    let created;
     try {
       if (item) await patch(`/employees/${item.id}`, body);
-      else await post('/employees', { ...body, login: login?.email ? login : undefined });
-      toast('Saved.'); onSaved();
-    } catch (err) { setError(err); }
+      else created = await post('/employees', body);
+    } catch (err) { setError(err); return; }
+    if (item && acct.password) {
+      try {
+        if (item.user_id) await api(`/employees/${item.id}/password`, { method: 'PUT', body: { password: acct.password } });
+        else await post(`/employees/${item.id}/login`, { email: v.email, accessLevel: acct.accessLevel, password: acct.password });
+      } catch (err) {
+        setError(new Error(`The details were saved, but the password was not: ${err.message}`));
+        return;
+      }
+      toast(item.user_id ? 'Saved, with the new password.' : `Saved. They sign in with ${v.email.trim().toLowerCase()} and the password you set.`);
+      onSaved();
+      return;
+    }
+    if (created && login?.enabled) {
+      try {
+        const r = await post(`/employees/${created.id}/login`, { email: v.email, accessLevel: login.accessLevel, password: login.password });
+        toast(`Saved. They sign in with ${r.email} and the password you set.`);
+      } catch (err) {
+        toast(`Employee saved, but no login was made: ${err.message} Open Edit to try again.`, 'bad');
+      }
+    } else toast('Saved.');
+    onSaved();
   };
   /** Delete someone added by mistake; someone with history is offered "Exited" instead (the server decides). */
   const remove = async () => {
@@ -122,20 +155,68 @@ function EmployeeForm({ item, refs, onClose, onSaved }) {
         </div>
         <ModuleAccess value={v.module_access ?? null} onChange={(module_access) => setV({ ...v, module_access })}
           companyModules={session.modules ?? []} isHrLogin={item ? item.access_level === 'hr_admin' : login?.accessLevel === 'hr_admin'} />
+        {item && <LoginCard item={item} email={v.email} value={acct} onChange={setAcct} />}
         {login && (
-          <Card title="Sign-in account (optional)">
-            <div className="form-grid">
-              <Input label="Login email" type="email" value={login.email} onChange={(e) => setLogin({ ...login, email: e.target.value })} />
-              <PasswordInput label="Temporary password" autoComplete="new-password" help="At least 8 characters" value={login.password} onChange={(e) => setLogin({ ...login, password: e.target.value })} />
-              <Input as="select" label="Access" value={login.accessLevel} onChange={(e) => setLogin({ ...login, accessLevel: e.target.value })}>
-                <option value="employee">Employee</option><option value="manager">Manager</option><option value="hr_admin">HR admin</option>
-              </Input>
+          <Card title="Sign-in account">
+            <div className="stack">
+              <Switch label="Give them a login (no email is sent: you give them the password)" checked={login.enabled} onChange={(enabled) => setLogin({ ...login, enabled })} />
+              {login.enabled && (
+                <div className="form-grid">
+                  <Input as="select" label="Access" value={login.accessLevel} onChange={(e) => setLogin({ ...login, accessLevel: e.target.value })}
+                    help={login.accessLevel === 'employee' ? 'Sees only their own attendance, leave, tasks and payslips.' : login.accessLevel === 'manager' ? 'Also their team (rights set under Teams & access).' : 'Can do everything.'}>
+                    <option value="employee">Employee</option><option value="manager">Manager / team lead</option><option value="hr_admin">HR admin</option>
+                  </Input>
+                  <PasswordInput label="Password" autoComplete="new-password" help={`At least 8 characters. They sign in with ${v.email || 'the email above'} and can change it later.`}
+                    value={login.password} onChange={(e) => setLogin({ ...login, password: e.target.value })} />
+                </div>
+              )}
             </div>
           </Card>
         )}
         <ErrorBox error={error} />
       </div>
     </Modal>
+  );
+}
+
+const LEVEL_LABEL = { employee: 'Employee', manager: 'Manager / team lead', hr_admin: 'HR admin' };
+
+/**
+ * Editing someone: shows their sign-in account, or (added without one, e.g. by an import or with
+ * the login fields left empty) creates it and emails them a link to choose their password.
+ */
+function LoginCard({ item, email, value, onChange }) {
+  const set = (k) => (e) => onChange({ ...value, [k]: e.target.value });
+  if (item.user_id) {
+    const emailChanges = email && item.login_email && email.trim().toLowerCase() !== item.login_email.toLowerCase();
+    return (
+      <Card title="Sign-in account">
+        <p className="small" style={{ margin: 0 }}>
+          <span className="badge good">Has a login</span> Signs in with <strong>{item.login_email ?? item.email}</strong> · {LEVEL_LABEL[item.access_level] ?? item.access_level}
+        </p>
+        {emailChanges && <p className="small" style={{ margin: '6px 0 0', color: 'var(--warn)' }}>After saving they sign in with <strong>{email.trim().toLowerCase()}</strong> instead.</p>}
+        <div className="form-grid" style={{ marginTop: 12 }}>
+          <PasswordInput label="New password (optional)" autoComplete="new-password"
+            help="Leave empty to keep their password. At least 8 characters; saved with Save, and they are signed out everywhere."
+            value={value.password} onChange={set('password')} />
+        </div>
+        <p className="small muted" style={{ margin: '8px 0 0' }}>Their sign-in email is the Email above. Change what they can do, or who they manage, under HR &gt; Teams &amp; access.</p>
+      </Card>
+    );
+  }
+  return (
+    <Card title="Sign-in account">
+      <div className="stack">
+        <p className="small" style={{ margin: 0 }}><span className="badge warn">No login yet</span> {item.full_name} can't sign in. Set a password here and click
+          Save: they sign in with the Email above{email ? ` (${email})` : ''} and this password. No email is sent.</p>
+        <div className="form-grid">
+          <Input as="select" label="Access" value={value.accessLevel} onChange={set('accessLevel')}>
+            <option value="employee">Employee</option><option value="manager">Manager / team lead</option><option value="hr_admin">HR admin</option>
+          </Input>
+          <PasswordInput label="Password" autoComplete="new-password" help="At least 8 characters. Leave empty for no login." value={value.password} onChange={set('password')} />
+        </div>
+      </div>
+    </Card>
   );
 }
 
@@ -151,6 +232,8 @@ export default function Employees() {
     return { departments, roles, employmentTypes, shifts, locations, customFields, employees };
   }, []);
   const [editing, setEditing] = useState(null);
+  const [giving, setGiving] = useState(false);
+  const missing = (data ?? []).filter((e) => !e.user_id && e.status === 'active');
   const rows = (data ?? []).filter((e) => `${e.full_name} ${e.employee_code} ${e.department_name}`.toLowerCase().includes(search.toLowerCase()));
   return (
     <div className="stack lg">
@@ -159,7 +242,9 @@ export default function Employees() {
           onClick={() => download(`/employees/export.csv${showInactive ? '?status=all' : ''}`, `employees-${new Date().toISOString().slice(0, 10)}.csv`)
             .catch((e) => toast(e.message, 'bad'))}>Export CSV</Button>
         <Button icon="file" onClick={() => setImporting(true)}>Import from CSV</Button>
+        {missing.length > 0 && <Button icon="lock" onClick={() => setGiving(true)}>Give logins to everyone ({missing.length})</Button>}
         <Button kind="primary" icon="plus" disabled={!refs} onClick={() => setEditing({})}>Add employee</Button></>} />
+      {giving && <BulkLoginsDialog count={missing.length} onClose={() => setGiving(false)} onDone={() => { setGiving(false); reload(); }} />}
       {importing && <EmployeeImport onClose={() => setImporting(false)}
         onDone={(r) => { setImporting(false); reload(); reloadRefs(); toast(`Import done: ${r.added} added, ${r.updated} updated${r.failed ? `, ${r.failed} skipped` : ''}.`); }} />}
       <div className="row">
@@ -171,7 +256,7 @@ export default function Employees() {
           <div className="table-wrap"><table className="table">
             <thead><tr><th>Code</th><th>Name</th><th>Department</th><th>Role</th><th>Manager</th><th>Joined</th><th>Status</th><th /></tr></thead>
             <tbody>{rows.map((e) => (
-              <tr key={e.id}><td style={{ fontVariantNumeric: 'tabular-nums' }}>{e.employee_code}</td><td>{e.full_name}</td><td>{e.department_name ?? '—'}</td><td>{e.role_name ?? '—'}</td>
+              <tr key={e.id}><td style={{ fontVariantNumeric: 'tabular-nums' }}>{e.employee_code}</td><td>{e.full_name}{!e.user_id && e.status === 'active' && <> <span className="badge warn" title="Can't sign in yet: open Edit to create a login">No login</span></>}</td><td>{e.department_name ?? '—'}</td><td>{e.role_name ?? '—'}</td>
                 <td>{e.manager_name ?? '—'}</td><td>{fmtDate(e.joining_date)}</td>
                 <td>{e.status === 'active' ? <span className="badge good">Active</span> : <StatusBadge status={e.status} />}
                   {e.module_access && e.access_level !== 'hr_admin' && <span className="badge" title={`Can use: ${e.module_access.join(', ') || 'nothing'}`}>Limited access</span>}</td>

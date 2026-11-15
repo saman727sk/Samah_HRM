@@ -15,7 +15,7 @@ import { audit } from '../lib/audit.js';
 import { tenantToday } from '../lib/clock.js';
 import { addDays, isYmd, localTime } from '../lib/dates.js';
 import { badRequest, forbidden, notFound } from '../lib/errors.js';
-import { isHr, isSystem, reportIds } from './access.js';
+import { can, isHr, isSystem, reportIds, requirePermission } from './access.js';
 import { isEnabled, requireModule } from './features.js';
 import { notify, userOfEmployee } from './notifications.js';
 
@@ -50,7 +50,7 @@ async function actorName(ctx) {
 /** Can the signed-in person assign work to / manage the tasks of this employee? */
 async function canManageEmployee(ctx, employeeId) {
   if (isHr(ctx) || isSystem(ctx)) return true;
-  if (!ctx.actor?.employeeId || ctx.actor.employeeId === employeeId) return false;
+  if (!ctx.actor?.employeeId || ctx.actor.employeeId === employeeId || !can(ctx, 'team.tasks')) return false;
   return (await reportIds(ctx, ctx.actor.employeeId)).includes(employeeId);
 }
 
@@ -115,6 +115,7 @@ export async function assignablePeople(ctx) {
   let ids = null;
   if (!isHr(ctx)) {
     if (!ctx.actor?.employeeId) throw forbidden('Only managers and HR can assign tasks.');
+    if (!can(ctx, 'team.tasks')) return [];
     ids = await reportIds(ctx, ctx.actor.employeeId);
     if (!ids.length) return [];
   }
@@ -178,6 +179,7 @@ export async function listTasks(ctx, { view = 'mine', status = 'open', employeeI
   let where = '';
   const params = [ctx.tenant.id];
   if (view === 'team') {
+    requirePermission(ctx, 'team.tasks');
     if (!isHr(ctx)) {
       const ids = myId ? await reportIds(ctx, myId) : [];
       params.push(ids, ctx.actor.userId);

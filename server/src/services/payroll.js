@@ -22,7 +22,11 @@ import { toCsv } from '../lib/csv.js';
 import { eachDay, fullMonthsBetween, maxDate, minDate, monthEnd } from '../lib/dates.js';
 import { AppError, badRequest, conflict, forbidden, notFound } from '../lib/errors.js';
 import { round2 } from '../lib/util.js';
-import { isHr, requireHr } from './access.js';
+import { can, requirePermission } from './access.js';
+
+/** HR, or payroll staff (people HR gave the "payroll" right). */
+const isHr = (ctx) => can(ctx, 'payroll');
+const requireHr = (ctx) => requirePermission(ctx, 'payroll');
 import { daySummaries, shiftRule } from './attendance.js';
 import { isEnabled, requireModule } from './features.js';
 import { logoUrl } from './company.js';
@@ -414,7 +418,7 @@ export async function getPayslip(ctx, id) {
   const p = await ctx.db.one(
     `select p.*, r.period_key, r.period_start, r.period_end, r.status as run_status, r.locked_at from payslips p
        join payroll_runs r on r.id = p.payroll_run_id where p.id = $1 and p.tenant_id = $2`, [id, ctx.tenant.id]);
-  // Salary data: HR, or the employee once the month is locked. Managers never.
+  // Salary data: HR and payroll staff, or the employee once the month is locked. Managers never.
   if (!p || (!isHr(ctx) && (ctx.actor?.employeeId !== p.employee_id || p.run_status !== 'locked'))) throw notFound('Payslip');
   if (!isHr(ctx)) await requireModule(ctx, 'payroll'); // HR can switch payslips off per employee
   // The company's own letterhead (its logo is fetched separately by the PDF route / the page).

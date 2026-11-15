@@ -26,7 +26,8 @@ export function Due({ task, today }) {
  * managers also see what they gave. Each task has a discussion thread. ?task=<id> opens one.
  */
 export default function AssignedTasks({ query = {}, switcher }) {
-  const { isManager, tz } = useApp();
+  const { isManager: manager, can, tz } = useApp();
+  const isManager = manager && can('team.tasks');
   const today = todayIn(tz);
   const [view, setView] = useState(query.view === 'team' && isManager ? 'team' : 'mine');
   const [status, setStatus] = useState('open');
@@ -127,7 +128,7 @@ function AssignDialog({ onClose, onDone, task }) {
         {!editing && (
           <div className="field">
             <span className="field-label">Who should do it? {chosen.size > 0 && <span className="muted">({chosen.size} chosen)</span>}</span>
-            {peopleError ? <ErrorBox error={peopleError} /> : !people ? <Loading /> : people.length === 0 ? <Empty>Nobody reports to you yet.</Empty> : (
+            {peopleError ? <ErrorBox error={peopleError} /> : !people ? <Loading /> : people.length === 0 ? <Empty>Nobody works under you yet, so there is no one to give tasks to. Ask HR to add people to your team (HR &gt; Teams &amp; access, or set you as their Manager on their employee record).</Empty> : (
               <>
                 <div className="row">
                   <div style={{ flex: 1 }}><Input placeholder="Search people" aria-label="Search people" value={search} onChange={(e) => setSearch(e.target.value)} /></div>

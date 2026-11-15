@@ -17,7 +17,7 @@ import { audit } from '../lib/audit.js';
 import { tenantToday } from '../lib/clock.js';
 import { addDays, diffDays, eachDay, isYmd, localTime, todayIn, zonedInstant } from '../lib/dates.js';
 import { AppError, badRequest, conflict, forbidden, notFound } from '../lib/errors.js';
-import { assertCanManage, isSystem } from './access.js';
+import { assertCanManage, isSystem, requirePermission } from './access.js';
 import { getEmployee } from './employees.js';
 import { isEnabled, requireModule } from './features.js';
 import { notify, userOfEmployee } from './notifications.js';
@@ -401,6 +401,7 @@ async function firstEventAfter(ctx, employeeId, instant) {
  */
 export async function recordManual(ctx, { employeeId, workDate, checkIn, checkOut, reason: why } = {}) {
   await requireModule(ctx, 'attendance');
+  requirePermission(ctx, 'team.attendance');
   await assertCanManage(ctx, employeeId);
   const employee = await getEmployee(ctx, employeeId);
   const tz = ctx.tenant.timezone;

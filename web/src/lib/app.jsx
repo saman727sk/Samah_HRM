@@ -133,6 +133,8 @@ export function AppProvider({ children }) {
     session, booting, login, verifyOtp, resendOtp, logout, resetPassword, provider, signupEnabled, signInWithToken, reloadSession: loadSession, t, locale, setLocale, theme, setTheme, toast,
     level: session?.user?.accessLevel, isHr: session?.user?.accessLevel === 'hr_admin',
     isManager: ['manager', 'hr_admin'].includes(session?.user?.accessLevel),
+    /** A right HR gave this person (team.approve, team.rota, team.tasks, team.attendance, team.access, helpdesk, payroll). HR has all. */
+    can: (key) => session?.user?.accessLevel === 'hr_admin' || !!session?.user?.permissions?.includes(key),
     tz: session?.tenant?.timezone ?? 'Asia/Karachi',
   }), [session, booting, login, verifyOtp, resendOtp, loadSession, t, locale, theme, toast, logout, resetPassword, provider, signupEnabled, signInWithToken]);
 

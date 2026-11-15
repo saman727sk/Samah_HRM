@@ -16,7 +16,7 @@ import { audit } from '../lib/audit.js';
 import { tenantToday } from '../lib/clock.js';
 import { addDays, eachDay, isYmd, startOfWeek } from '../lib/dates.js';
 import { badRequest, forbidden } from '../lib/errors.js';
-import { isHr, isManager, isSystem, reportIds } from './access.js';
+import { isHr, isManager, isSystem, reportIds, requirePermission } from './access.js';
 import { requireModule } from './features.js';
 import { notify, userOfEmployee } from './notifications.js';
 
@@ -34,7 +34,7 @@ export async function rotaFor(db, tenantId, employeeId, from, to) {
 /** Who the signed-in person may plan: null = anyone (HR); otherwise a list of employee ids. */
 async function plannable(ctx) {
   if (isHr(ctx) || isSystem(ctx)) return null;
-  if (isManager(ctx) && ctx.actor.employeeId) return reportIds(ctx, ctx.actor.employeeId);
+  if (isManager(ctx) && ctx.actor.employeeId) { requirePermission(ctx, 'team.rota'); return reportIds(ctx, ctx.actor.employeeId); }
   throw forbidden('Only managers and HR plan rotas.');
 }
 

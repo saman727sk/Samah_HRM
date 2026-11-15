@@ -135,7 +135,8 @@ function TaskRow({ log, showName, canEdit, canDelete, onEdit, onDelete }) {
 
 /** The person's own work log (what they did, hours, blockers, files). */
 function WorkLog({ query = {}, switcher }) {
-  const { t, tz, toast, isHr, isManager, session } = useApp();
+  const { t, tz, toast, isHr, isManager: manager, can, session } = useApp();
+  const isManager = manager && can('team.tasks');
   const confirm = useConfirm();
   const today = todayIn(tz);
   const scopes = [{ value: 'mine', label: t('ui.my_tasks', 'My tasks') },

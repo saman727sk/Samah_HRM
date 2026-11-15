@@ -59,7 +59,7 @@ export function TeamCalendar({ cal }) {
 }
 
 export default function Team() {
-  const { t, tz, session } = useApp();
+  const { t, tz, session, can } = useApp();
   const [month, setMonth] = useState(monthOf(todayIn(tz)));
   const [manual, setManual] = useState(false);
   const { data, error, loading, reload } = useLoad(() => get(`/dashboard/manager${qs({ month })}`), [month]);
@@ -69,9 +69,10 @@ export default function Team() {
   return (
     <div className="stack lg">
       <PageHead title={t('nav.team', 'Team dashboard')} actions={<>
-        {modules.includes('attendance') && data.team.people.length > 0 && <Button icon="clock" onClick={() => setManual(true)}>{t('ui.record_attendance', 'Record attendance')}</Button>}
-        {modules.includes('tasks') && <a className="btn" href="#/tasks?scope=team">{t('ui.work_reports', 'Work reports')}</a>}
-        <a className="btn primary" href="#/approvals">{t('nav.approvals', 'Approvals')} ({data.approvals.length})</a></>} />
+        {modules.includes('attendance') && can('team.attendance') && data.team.people.length > 0 && <Button icon="clock" onClick={() => setManual(true)}>{t('ui.record_attendance', 'Record attendance')}</Button>}
+        {modules.includes('tasks') && can('team.tasks') && <a className="btn" href="#/tasks?scope=team">{t('ui.work_reports', 'Work reports')}</a>}
+        {can('team.access') && <a className="btn" href="#/team/features">{t('nav.team_features', 'Team features')}</a>}
+        {can('team.approve') && <a className="btn primary" href="#/approvals">{t('nav.approvals', 'Approvals')} ({data.approvals.length})</a>}</>} />
       {manual && <ManualAttendanceModal onClose={() => setManual(false)} onDone={reload} />}
       <Card title={t('ui.team_today', 'Team today')}>{data.team.people.length ? <TodayBoard board={data.team} /> : <Empty>{t('ui.no_team', 'Nobody reports to you yet.')}</Empty>}</Card>
       <Card title={`${t('ui.team_calendar', 'Team calendar')} — ${monthLabel(month)}`} actions={<>

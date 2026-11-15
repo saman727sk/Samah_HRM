@@ -4,6 +4,7 @@
  * signed token, never from the request body, so one tenant can't address
  * another tenant's rows.
  */
+import { effectivePermissions } from '../services/access.js';
 import Fastify from 'fastify';
 import jwt from 'jsonwebtoken';
 import { AppError } from '../lib/errors.js';
@@ -28,6 +29,7 @@ import taskRoutes from './routes/tasks.js';
 import rotaRoutes from './routes/rota.js';
 import helpdeskRoutes from './routes/helpdesk.js';
 import assignedTaskRoutes from './routes/assignedTasks.js';
+import accessRoutes from './routes/access.js';
 import { logoOf } from '../services/company.js';
 import { accessState } from '../services/billing.js';
 import { logTransport } from '../services/notifications.js';
@@ -92,7 +94,7 @@ export function buildApp({ db, clock = systemClock(), jwtSecret = process.env.JW
       sessionVersion = claims.sv ?? 0;
     }
     const user = await db.one(
-      `select u.id, u.tenant_id, u.access_level, u.locale, u.is_active, u.session_version, e.id as employee_id
+      `select u.id, u.tenant_id, u.access_level, u.locale, u.is_active, u.session_version, e.id as employee_id, e.permissions
          from users u left join employees e on e.user_id = u.id where ${where[0]}`, [where[1]]);
     if (!user && idp.name === 'firebase') throw new AppError(401, 'unauthenticated', 'This Firebase account has no access to the HRM. Ask HR to create your login.');
     if (!user?.is_active) throw new AppError(401, 'unauthenticated', 'This account is disabled.');
@@ -107,7 +109,8 @@ export function buildApp({ db, clock = systemClock(), jwtSecret = process.env.JW
     if (tenant && tenant.status !== 'active') throw new AppError(403, 'tenant_suspended', 'This company account is suspended.');
     req.ctx = {
       db, clock, tenant, jwtSecret,
-      actor: { userId: user.id, accessLevel: user.access_level, employeeId: user.employee_id, tenantId: user.tenant_id },
+      actor: { userId: user.id, accessLevel: user.access_level, employeeId: user.employee_id, tenantId: user.tenant_id,
+        permissions: effectivePermissions(user.access_level, user.permissions) },
       locale: req.headers['accept-language']?.split(',')[0]?.split('-')[0] || user.locale || tenant?.default_locale || 'en',
     };
     if (!tenant && !path.startsWith('/api/admin/') && path !== '/api/me') {
@@ -169,6 +172,7 @@ export function buildApp({ db, clock = systemClock(), jwtSecret = process.env.JW
   app.register(rotaRoutes, { prefix: '/api/rota' });
   app.register(helpdeskRoutes, { prefix: '/api/helpdesk' });
   app.register(assignedTaskRoutes, { prefix: '/api/assigned-tasks' });
+  app.register(accessRoutes, { prefix: '/api/access' });
   return app;
 }
 

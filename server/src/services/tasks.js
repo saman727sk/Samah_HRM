@@ -12,7 +12,7 @@ import { audit } from '../lib/audit.js';
 import { tenantToday } from '../lib/clock.js';
 import { addDays, diffDays, isYmd } from '../lib/dates.js';
 import { badRequest, conflict, forbidden, notFound } from '../lib/errors.js';
-import { assertCanView, isHr, isManager, isSystem, reportIds } from './access.js';
+import { assertCanView, isHr, isManager, isSystem, reportIds, requirePermission } from './access.js';
 import { requireModule } from './features.js';
 import { hrUserIds, notify, userOfEmployee } from './notifications.js';
 
@@ -192,6 +192,7 @@ export async function listLogs(ctx, { scope = 'mine', employeeId, from, to, stat
     ids = null;
   } else if (scope === 'team') {
     if (!isManager(ctx) || !ctx.actor.employeeId) throw forbidden('Only managers can see team tasks.');
+    requirePermission(ctx, 'team.tasks');
     ids = await reportIds(ctx, ctx.actor.employeeId);
     if (!ids.length) return { from, to, logs: [] };
   } else {

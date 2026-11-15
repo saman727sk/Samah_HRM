@@ -1,4 +1,4 @@
-import { createEmployee, deleteEmployee, getEmployee, listEmployees, nextEmployeeCode, updateEmployee } from '../../services/employees.js';
+import { addLogin, addMissingLogins, setLoginPassword, createEmployee, deleteEmployee, getEmployee, listEmployees, nextEmployeeCode, updateEmployee } from '../../services/employees.js';
 import { exportEmployees, importEmployees, TEMPLATE_HEADER } from '../../services/employeeImport.js';
 import { requireHr } from '../../services/access.js';
 import { toCsv } from '../../lib/csv.js';
@@ -28,4 +28,7 @@ export default async function employeeRoutes(app) {
   app.post('/', async (req, reply) => reply.status(201).send(await createEmployee(req.ctx, req.body ?? {})));
   app.patch('/:id', async (req) => updateEmployee(req.ctx, req.params.id, req.body ?? {}));
   app.delete('/:id', async (req) => deleteEmployee(req.ctx, req.params.id));
+  app.post('/logins', async (req) => addMissingLogins({ ...req.ctx, mailer: app.mailer, appUrl: app.appUrl }, req.body ?? {}));
+  app.put('/:id/password', async (req) => setLoginPassword(req.ctx, req.params.id, req.body ?? {}));
+  app.post('/:id/login', async (req, reply) => reply.status(201).send(await addLogin({ ...req.ctx, mailer: app.mailer, appUrl: app.appUrl }, req.params.id, req.body ?? {})));
 }
