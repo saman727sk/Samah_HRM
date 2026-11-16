@@ -42,12 +42,14 @@ export const setUnauthorizedHandler = (fn) => { onUnauthorized = fn; };
 let locale = 'en';
 export const setApiLocale = (l) => { locale = l; };
 
+export const API_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/+$/, '');
+
 export async function api(path, { method = 'GET', body, raw = false } = {}) {
   const headers = { 'accept-language': locale };
   const token = await tokenProvider();
   if (token) headers.authorization = `Bearer ${token}`;
   if (body !== undefined) headers['content-type'] = 'application/json';
-  const res = await fetch(`/api${path}`, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
+  const res = await fetch(`${API_BASE}/api${path}`, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
   if (res.status === 401 && path !== '/auth/login') onUnauthorized();
   if (raw && res.ok) return res;
   const text = await res.text();

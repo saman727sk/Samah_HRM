@@ -1,6 +1,7 @@
 /* eslint-disable react/only-export-components */
 /** Small, accessible building blocks shared by every page. */
 import { useEffect, useId, useState } from 'react';
+import { API_BASE } from '../lib/api.js';
 import { useApp } from '../lib/app.jsx';
 import { CountUp } from './motion.jsx';
 
@@ -184,7 +185,7 @@ export const FullLogo = () => (
 export const Logo = ({ size = 'md' }) => <img src="/logo.png" alt={PRODUCT_NAME} className={`brand-logo ${size}`} />;
 
 /** Logo URL of a company row from the API (tenants.logo_updated_at), or null. */
-export const companyLogoUrl = (row) => (row?.logo_updated_at ? `/api/logos/${row.id}?v=${Date.parse(row.logo_updated_at)}` : null);
+export const companyLogoUrl = (row) => (row?.logo_updated_at ? `${API_BASE}/api/logos/${row.id}?v=${Date.parse(row.logo_updated_at)}` : null);
 
 /** A company's own logo, or its initials when it has none (company screens never show the platform's logo). */
 export function CompanyLogo({ company, size = 'sm' }) {
