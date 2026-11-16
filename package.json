@@ -15,6 +15,7 @@
     "create-owner": "npm run create-owner -w server --",
     "reset-password": "npm run reset-password -w server --",
     "test": "npm test -w server",
+    "deploy:firebase": "npm run build -w web && npx firebase-tools deploy --only hosting",
     "share": "npm run build -w web && npm run preview -w web"
   }
 }
