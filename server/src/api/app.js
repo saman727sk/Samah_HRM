@@ -72,7 +72,15 @@ export function buildApp({ db, clock = systemClock(), jwtSecret = process.env.JW
     try { done(null, JSON.parse(body)); } catch (err) { err.statusCode = 400; done(err); }
   });
 
-  app.addHook('onRequest', async (req) => {
+  app.addHook('onRequest', async (req, reply) => {
+    reply.header('access-control-allow-origin', req.headers.origin || '*');
+    reply.header('access-control-allow-methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+    reply.header('access-control-allow-headers', 'authorization, content-type, accept-language');
+    reply.header('access-control-allow-credentials', 'true');
+    if (req.method === 'OPTIONS') {
+      reply.status(204).send();
+      return;
+    }
     const path = req.url.split('?')[0];
     if (!path.startsWith('/api/') || PUBLIC.has(path) || path.startsWith('/api/logos/')) return;
     const header = req.headers.authorization ?? '';

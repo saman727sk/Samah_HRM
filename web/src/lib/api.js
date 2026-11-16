@@ -53,7 +53,15 @@ export async function api(path, { method = 'GET', body, raw = false } = {}) {
   if (res.status === 401 && path !== '/auth/login') onUnauthorized();
   if (raw && res.ok) return res;
   const text = await res.text();
-  const data = text ? JSON.parse(text) : null;
+  let data;
+  try {
+    data = text ? JSON.parse(text) : null;
+  } catch {
+    const hint = res.status === 404
+      ? 'Backend API not reachable (404). Please ensure the backend server is running and VITE_API_URL is configured.'
+      : (text?.slice(0, 150) || `Request failed (${res.status})`);
+    data = { error: { message: hint } };
+  }
   if (!res.ok) throw new ApiError(res.status, data);
   return data;
 }
