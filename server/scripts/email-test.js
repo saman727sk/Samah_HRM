@@ -2,8 +2,8 @@
  * Checks the email settings in server/.env (Resend or SMTP) by sending one email.
  *   npm run email:test -- you@example.com
  */
-import { PRODUCT_NAME } from '../lib/product.js';
-import { emailProvider, emailTransportFromEnv } from './notifications.js';
+import { PRODUCT_NAME } from '../src/lib/product.js';
+import { emailProvider, emailTransportFromEnv } from '../src/services/notifications.js';
 
 const to = process.argv[2];
 if (!to?.includes('@')) {

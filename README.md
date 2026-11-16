@@ -8,7 +8,7 @@ Multi-tenant HRM where **every business rule is data**. The code contains engine
 |---|---|---|
 | `server/` | Node.js (Fastify) API, PostgreSQL schema, config store, policy engines, attendance, workflows | **Phases 1-3 done** |
 | `web/` | React (Vite) — dashboards, check-in, requests, approvals, HR settings panel | **Phase 3 done** |
-| `mobile/` | React Native (Expo) — geofenced auto check-in, offline sync | Phase 5 |
+| `mobile/` (not created yet) | React Native (Expo) — geofenced auto check-in, offline sync | Phase 5 |
 
 ## Quick start
 
@@ -19,7 +19,7 @@ npm install
 npm run seed            # demo company, attendance since last month, payroll, pending requests (add -- --reset to start over)
 npm run dev             # API on :4000 + web app on http://localhost:5300 together (Ctrl+C stops both)
 # or separately: npm run dev:server / npm run dev:web
-npm test                # 210 automated tests, each on a fresh in-memory Postgres
+npm test                # 266 automated tests, each on a fresh in-memory Postgres
 ```
 
 Demo logins (password `Passw0rd!`):
@@ -77,18 +77,47 @@ With `DATABASE_URL` set, Firebase (if configured) is used for **sign-in only**; 
 ## Architecture
 
 ```
-server/
-  src/db/migrations/001_init.sql   full schema (36 tables), append-only triggers
-  src/config/                      configuration engine
-    registry.js                    shape + validation of each setting key (no values)
-    resolver.js                    effective rule for employee + date, layered, cached
-    store.js                       draft / validate / publish / history / diff / restore / retire
-  src/engines/                     pure policy engines (no DB): wfh.js, leave.js, calendar.js
-  src/services/                    data loading, RBAC, persistence, preview/simulation
-  src/api/                         Fastify routes
-  seed/defaults.json               default data copied into every new company
-  seed/demo.js                     demo company "Acme Technologies"
-  test/                            node:test suites
+samah_HRM/
+├── package.json                   npm workspaces (server, web) + root commands
+├── scripts/dev.mjs                runs API and web app together (npm run dev)
+├── firebase.json                  Firebase project config (Realtime Database rules)
+├── database.rules.json
+├── docs/
+│   ├── manuals/                   user-manual.md, billing-manual.md (for customers)
+│   └── internal/                  gaps-and-security.md, website-prompt.md (for the team)
+├── server/                        Node.js + Fastify API
+│   ├── src/
+│   │   ├── index.js               entry point: database, email, payments, background jobs
+│   │   ├── api/app.js             Fastify app, sign-in check, tenant context
+│   │   ├── api/routes/            one file per area (leave, payroll, attendance…)
+│   │   ├── services/              business logic, RBAC, persistence, preview/simulation
+│   │   ├── engines/               pure policy engines, no DB (wfh, leave, payroll, formula…)
+│   │   ├── config/                configuration engine
+│   │   │   ├── registry.js        shape + validation of each setting key (no values)
+│   │   │   ├── resolver.js        effective rule for employee + date, layered, cached
+│   │   │   └── store.js           draft / validate / publish / history / diff / restore
+│   │   ├── db/                    connection (PGlite or PostgreSQL), migrations/
+│   │   ├── auth/                  identity provider (local passwords or Firebase)
+│   │   ├── firebase/              Firebase Admin setup and Realtime Database sync
+│   │   └── lib/                   small helpers (dates, csv, i18n, errors…)
+│   ├── scripts/                   command-line tools run through npm
+│   │   ├── migrate.js             npm run migrate -w server
+│   │   ├── seed.js                npm run seed
+│   │   ├── create-owner.js        npm run create-owner
+│   │   ├── reset-password.js      npm run reset-password
+│   │   └── email-test.js          npm run email:test -w server
+│   ├── seed/                      default and demo data used by the seed script and tests
+│   │   ├── defaults.json          default data copied into every new company
+│   │   ├── demo.js                demo company "Acme Technologies"
+│   │   └── logos/                 logos of the test companies
+│   └── test/                      node:test suites
+└── web/                           React + Vite app
+    ├── public/                    logos and icons
+    └── src/
+        ├── main.jsx, App.jsx      entry point and page routing
+        ├── pages/                 one file per screen; settings/ and admin/ grouped
+        ├── components/            shared UI pieces
+        └── lib/                   API client, formatting, Firebase client
 ```
 
 ### How a rule is resolved

@@ -1,5 +1,5 @@
-import { createDb } from './index.js';
-import { migrate } from './migrate.js';
+import { createDb } from '../src/db/index.js';
+import { migrate } from '../src/db/migrate.js';
 
 const db = await createDb();
 const ran = await migrate(db);

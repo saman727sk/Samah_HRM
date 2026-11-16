@@ -10,8 +10,8 @@ import { rm } from 'node:fs/promises';
 import { createDb } from '../src/db/index.js';
 import { migrate } from '../src/db/migrate.js';
 import { setupFirebase } from '../src/firebase/bootstrap.js';
-import { DEMO_PASSWORD, seedDemo } from './demo.js';
-import { DEMO_COMPANIES, seedSaasDemo } from './saas-demo.js';
+import { DEMO_PASSWORD, seedDemo } from '../seed/demo.js';
+import { DEMO_COMPANIES, seedSaasDemo } from '../seed/saas-demo.js';
 
 const reset = process.argv.includes('--reset');
 const demoData = process.argv.includes('--demo');
