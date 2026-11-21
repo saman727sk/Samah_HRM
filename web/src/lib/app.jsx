@@ -52,7 +52,18 @@ export function AppProvider({ children }) {
 
   const loadSession = useCallback(async () => {
     // Returns the session (or null) so sign-in can greet with the company's name.
-    try { const me = await get('/me'); setSession(me); return me; } catch { setToken(null); setSession(null); return null; } finally { setBooting(false); }
+    try {
+      const me = await get('/me');
+      if (!me?.user) throw new Error('Invalid session');
+      setSession(me);
+      return me;
+    } catch {
+      setToken(null);
+      setSession(null);
+      return null;
+    } finally {
+      setBooting(false);
+    }
   }, []);
 
   // Ask the API how to sign in. Firebase mode: the Firebase user drives the session.
@@ -84,7 +95,11 @@ export function AppProvider({ children }) {
       if (!firebaseAuth) throw new Error('This server uses Firebase sign-in, but the web app has no Firebase config (web/.env).');
       try { await signInWithEmailAndPassword(firebaseAuth, email, password); } catch (err) { throw friendly(err); }
       track('login', { method: 'firebase' });
-      try { setSession(await get('/me')); } catch (err) {
+      try {
+        const me = await get('/me');
+        if (!me?.user) throw new Error('Backend API is not responding. Please make sure the backend server is running.');
+        setSession(me);
+      } catch (err) {
         await signOut(firebaseAuth).catch(() => {}); // e.g. a Firebase account with no HRM login
         throw err;
       }

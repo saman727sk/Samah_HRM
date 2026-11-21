@@ -57,10 +57,10 @@ export async function api(path, { method = 'GET', body, raw = false } = {}) {
   try {
     data = text ? JSON.parse(text) : null;
   } catch {
-    const hint = res.status === 404
-      ? 'Backend API not reachable (404). Please ensure the backend server is running and VITE_API_URL is configured.'
+    const hint = (res.status === 404 || text?.includes('<!doctype') || text?.includes('<html'))
+      ? 'Backend API not reachable. Please ensure the backend server is running and configured.'
       : (text?.slice(0, 150) || `Request failed (${res.status})`);
-    data = { error: { message: hint } };
+    throw new ApiError(res.status || 500, { error: { message: hint } });
   }
   if (!res.ok) throw new ApiError(res.status, data);
   return data;
